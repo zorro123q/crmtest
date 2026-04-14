@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>元数据配置 — SalesPilot CRM</title>
+<style>
+:root{--primary:#0EA5E9;--primary-light:#E0F2FE;--accent:#8B5CF6;--success:#10B981;--warning:#F59E0B;--danger:#EF4444;--bg:#F1F5F9;--surface:#FFFFFF;--border:#E2E8F0;--text:#1E293B;--text2:#64748B;--text3:#94A3B8;--shadow:0 1px 3px rgba(15,23,42,0.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+.sidebar{width:240px;background:linear-gradient(180deg,#0F172A 0%,#1E3A5F 50%,#0F172A 100%);color:#CBD5E1;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.logo{padding:24px 20px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#0EA5E9,#6366F1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-text{font-size:18px;font-weight:700;background:linear-gradient(135deg,#fff,#0EA5E9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:10px;color:#64748B;margin-top:2px}
+.nav-section{padding:16px 0 8px}
+.nav-label{font-size:10px;font-weight:600;color:#475569;letter-spacing:1px;text-transform:uppercase;padding:0 20px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;font-size:14px;border-left:3px solid transparent;transition:all .2s;color:#94A3B8;text-decoration:none}
+.nav-item:hover{background:rgba(14,165,233,.08);color:#E2E8F0}
+.nav-item.active{background:linear-gradient(90deg,rgba(14,165,233,.15) 0%,transparent 100%);color:#fff;font-weight:600;border-left-color:#0EA5E9}
+.nav-item .icon{font-size:18px;width:22px}
+.nav-badge{margin-left:auto;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-size:10px;border-radius:12px;padding:2px 8px;font-weight:700}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:linear-gradient(145deg,#FFFFFF,#F8FAFC);border-bottom:1px solid var(--border);padding:0 28px;height:64px;display:flex;align-items:center;gap:20px}
+.topbar-title{font-size:20px;font-weight:700;color:var(--text);flex:1}
+.topbar-sub{font-size:13px;color:var(--text3);font-weight:400;margin-left:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0EA5E9,#6366F1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}
+.content{flex:1;overflow-y:auto;padding:24px}
+.schema-card{background:var(--surface);border-radius:16px;padding:24px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:20px}
+.schema-title{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.schema-tag{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--primary-light);color:var(--primary)}
+.field-list{display:flex;flex-direction:column;gap:8px}
+.field-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border-radius:8px}
+.field-name{font-size:14px;font-weight:600;flex:1}
+.field-type{font-size:12px;color:var(--text2);padding:3px 8px;background:var(--surface);border-radius:4px;border:1px solid var(--border)}
+.field-required{font-size:11px;color:#fff;background:var(--danger);padding:2px 6px;border-radius:4px}
+.field-desc{font-size:12px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🚀</div>
+    <div><div class="logo-text">SalesPilot</div><div class="logo-sub">CRM · AI Powered</div></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">概览</div>
+    <a class="nav-item" href="page-dashboard.html"><span class="icon">📊</span>销售仪表盘</a>
+    <a class="nav-item" href="page-funnel.html"><span class="icon">🔻</span>商机漏斗</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">销售管理</div>
+    <a class="nav-item" href="page-kanban.html"><span class="icon">🗂️</span>商机看板<span class="nav-badge">12</span></a>
+    <a class="nav-item" href="page-leads.html"><span class="icon">👥</span>线索管理<span class="nav-badge">8</span></a>
+    <a class="nav-item" href="page-opportunities.html"><span class="icon">💼</span>商机列表</a>
+    <a class="nav-item" href="page-report.html"><span class="icon">📋</span>商机通报</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">AI 能力</div>
+    <a class="nav-item" href="ai-input.html"><span class="icon">🤖</span>AI 智能录入</a>
+    <a class="nav-item" href="card-input.html"><span class="icon">🎯</span>价值评估</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">配置</div>
+    <a class="nav-item active" href="page-metadata.html"><span class="icon">⚙️</span>元数据配置</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">元数据配置 <span class="topbar-sub">Metadata-Driven 架构</span></div>
+    <div class="avatar">管</div>
+  </div>
+
+  <div class="content">
+    <!-- 线索 Schema -->
+    <div class="schema-card">
+      <div class="schema-title">
+        📋 线索管理 Schema
+        <span class="schema-tag">Lead</span>
+      </div>
+      <div class="field-list" id="lead-fields"></div>
+    </div>
+
+    <!-- 商机 Schema -->
+    <div class="schema-card">
+      <div class="schema-title">
+        💼 商机管理 Schema
+        <span class="schema-tag">Opportunity</span>
+      </div>
+      <div class="field-list" id="opp-fields"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var leadSchema = [
+  {name:'客户名称',type:'文本',required:true,desc:'客户公司全称'},
+  {name:'商务名称',type:'文本',required:false,desc:'商务对接人姓名'},
+  {name:'单位名称',type:'文本',required:false,desc:'客户单位名称'},
+  {name:'行业',type:'选择',required:true,desc:'客户所属行业'},
+  {name:'客户类型',type:'选择',required:true,desc:'老客户/新客户'},
+  {name:'等级',type:'选择',required:true,desc:'A级/B级/C级'},
+  {name:'需求描述',type:'多行文本',required:false,desc:'客户需求描述'},
+  {name:'预算',type:'金额',required:false,desc:'预估预算金额'},
+  {name:'线索来源',type:'选择',required:true,desc:'电话营销/展会/转介绍等'},
+  {name:'初审通过',type:'布尔',required:false,desc:'是否通过初审'},
+  {name:'有效接触日期',type:'日期',required:false,desc:'首次有效接触日期'},
+  {name:'决策链',type:'文本',required:false,desc:'客户决策链说明'},
+  {name:'合作意向',type:'选择',required:false,desc:'强/中/弱/无'},
+  {name:'状态',type:'选择',required:true,desc:'初筛中/待跟进/有效/无效'}
+];
+
+var oppSchema = [
+  {name:'客户名称',type:'文本',required:true,desc:'关联的客户'},
+  {name:'商机名称',type:'文本',required:true,desc:'商机项目名称'},
+  {name:'客户类型',type:'选择',required:true,desc:'老客户/新客户'},
+  {name:'涉及产品',type:'选择',required:false,desc:'关联的产品'},
+  {name:'预算',type:'金额',required:false,desc:'商机预算金额'},
+  {name:'等级',type:'选择',required:true,desc:'A级/B级/C级'},
+  {name:'阶段',type:'选择',required:true,desc:'收集信息/有效接触/拿到预算/方案认可/签约回款'},
+  {name:'负责人',type:'选择',required:true,desc:'商机负责人'},
+  {name:'项目类型',type:'选择',required:false,desc:'新签/增购/续费'},
+  {name:'立项日期',type:'日期',required:false,desc:'商机立项日期'},
+  {name:'预计签约日期',type:'日期',required:false,desc:'预计签约时间'},
+  {name:'B卡评分',type:'数字',required:false,desc:'B卡评估分数'},
+  {name:'方案沟通情况',type:'多行文本',required:false,desc:'方案沟通记录'}
+];
+
+function renderFields(containerId, fields) {
+  var html = fields.map(function(f){
+    return '<div class="field-item"><div><div class="field-name">'+f.name+(f.required?' <span class="field-required">必填</span>':'')+'</div><div class="field-desc">'+f.desc+'</div></div><span class="field-type">'+f.type+'</span></div>';
+  }).join('');
+  document.getElementById(containerId).innerHTML = html;
+}
+
+renderFields('lead-fields', leadSchema);
+renderFields('opp-fields', oppSchema);
+</script>
+</body>
+</html>

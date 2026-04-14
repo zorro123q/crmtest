@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI 智能录入 - SalesPilot</title>
+<style>
+:root{
+  --primary:#0066FF;
+  --primary-dark:#0052CC;
+  --primary-light:#E8F0FF;
+  --success:#00C48C;
+  --warning:#FFB020;
+  --danger:#FF4D4F;
+  --bg:#F0F2F5;
+  --surface:#FFFFFF;
+  --border:#E4E7EC;
+  --text:#1A202C;
+  --text2:#64748B;
+  --text3:#94A3B8;
+  --radius:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  color:var(--text);
+  max-width:520px;
+  margin:0 auto;
+}
+.header{
+  padding:18px 18px 22px;
+  background:linear-gradient(135deg,#0066FF,#5B49E6);
+  color:#fff;
+  position:sticky;
+  top:0;
+  z-index:10;
+  box-shadow:0 10px 24px rgba(0,102,255,.2);
+}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.back-btn,.desktop-link{
+  border:none;background:rgba(255,255,255,.18);color:#fff;border-radius:999px;
+  padding:8px 12px;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center
+}
+.title{font-size:18px;font-weight:800}
+.desc{font-size:13px;line-height:1.7;opacity:.9;margin-top:12px}
+.page{padding:16px 16px 28px}
+.card{
+  background:var(--surface);
+  border-radius:var(--radius);
+  box-shadow:0 2px 8px rgba(15,23,42,.06);
+  padding:16px;
+  margin-bottom:14px;
+}
+.card-title{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.badge{
+  display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;
+  background:var(--primary-light);color:var(--primary-dark);font-size:12px;font-weight:700
+}
+.hint{font-size:12px;color:var(--text2);line-height:1.7}
+.textarea{
+  width:100%;border:1px solid var(--border);border-radius:14px;padding:14px;font-size:14px;line-height:1.7;
+  min-height:160px;resize:vertical;font-family:inherit;background:#FBFCFE
+}
+.textarea:focus{outline:none;border-color:#8CB8FF;box-shadow:0 0 0 3px rgba(0,102,255,.12);background:#fff}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.btn{
+  width:100%;border:none;border-radius:14px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px
+}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff}
+.btn-ghost{background:#fff;border:1px solid var(--border);color:var(--text)}
+.btn-record{background:linear-gradient(135deg,#FF4D4F,#C81E1E);color:#fff}
+.btn-record.idle{background:linear-gradient(135deg,#0F766E,#0EA5E9)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.field{padding:12px 0;border-bottom:1px solid var(--border)}
+.field:last-child{border-bottom:none;padding-bottom:0}
+.field-label{font-size:12px;color:var(--text3);font-weight:700;margin-bottom:4px}
+.field-value{font-size:14px;font-weight:700;line-height:1.7}
+.field-value.amount{color:var(--primary-dark);font-size:18px}
+.tag{display:inline-flex;padding:4px 10px;border-radius:999px;background:#EFF6FF;color:#1D4ED8;font-size:12px;font-weight:800}
+.progress{height:8px;background:#E2E8F0;border-radius:999px;overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#00C48C,#0066FF);width:0;transition:width .3s ease}
+.history-item{padding:12px 0;border-bottom:1px solid var(--border)}
+.history-item:last-child{border-bottom:none}
+.history-title{font-size:14px;font-weight:800}
+.history-meta{font-size:12px;color:var(--text2);margin-top:6px;line-height:1.7}
+.toast{
+  position:fixed;left:50%;top:18px;transform:translateX(-50%) translateY(-16px);
+  background:#111827;color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:700;
+  opacity:0;transition:.25s;pointer-events:none;z-index:50
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.loading{
+  position:fixed;inset:0;background:rgba(255,255,255,.78);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:40
+}
+.loading-box{background:#fff;border-radius:18px;padding:22px 24px;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.15)}
+.spinner{width:36px;height:36px;border:4px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;margin:0 auto 12px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <button class="back-btn" onclick="window.location.href='crm-system.html'">返回</button>
+      <div class="title">AI 智能录入</div>
+      <a class="desktop-link" href="crm-system.html">工作台</a>
+    </div>
+    <div class="desc">支持文字粘贴和语音转写。解析完成后保存的商机会自动归属到当前登录账号，普通用户后续也只能编辑自己保存的那部分数据。</div>
+  </div>
+
+  <div class="page">
+    <div class="card">
+      <div class="card-title">📝 录入内容 <span class="badge" id="user-badge">当前用户</span></div>
+      <textarea class="textarea" id="source-text" placeholder="请输入拜访纪要、会议内容或销售跟进记录。示例：今天拜访了华北某制造集团，对智能质检和语音外呼项目有明确兴趣，预算约 120 万，下周安排技术交流。"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="loadDemo()">填充示例</button>
+        <button class="btn btn-ghost" onclick="clearText()">清空内容</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-record idle" id="record-btn" onclick="toggleRecord()">开始录音</button>
+        <button class="btn btn-primary" onclick="runAI()">AI 解析</button>
+      </div>
+      <div class="hint" id="record-hint" style="margin-top:12px">录音完成后会自动转写到文本框，再由 AI 解析为结构化商机数据。</div>
+    </div>
+
+    <div class="card" id="result-card" style="display:none">
+      <div class="card-title">✨ 解析结果</div>
+      <div class="field">
+        <div class="field-label">客户名称</div>
+        <div class="field-value" id="field-customer">-</div>
+      </div>
+      <div class="field">
+        <div class="field-label">预估金额</div>
+        <div class="field-value amount" id="field-amount">-</div>
+      </div>
+      <div class="field">
+        <div class="field-label">商机阶段</div>
+        <div class="field-value"><span class="tag" id="field-stage">-</span></div>
+      </div>
+      <div class="field">
+        <div class="field-label">核心需求</div>
+        <div class="field-value" id="field-needs">-</div>
+      </div>
+      <div class="field">
+        <div class="field-label">下一步动作</div>
+        <div class="field-value" id="field-next">-</div>
+      </div>
+      <div class="field">
+        <div class="field-label">AI 置信度 <span id="field-score">0%</span></div>
+        <div class="progress"><div class="progress-fill" id="score-fill"></div></div>
+      </div>
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn btn-ghost" onclick="resetResult()">重新编辑</button>
+        <button class="btn btn-primary" onclick="saveOpportunity()">保存为商机</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🕘 本次会话保存记录</div>
+      <div id="history-list" class="hint">暂未保存任何商机。</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="loading" id="loading">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div id="loading-text">AI 正在处理中...</div>
+    </div>
+  </div>
+
+<script src="crm-common.js"></script>
+<script>
+var currentUser = CRMApp.requireAuth('ai_input');
+var currentResult = null;
+var sessionHistory = [];
+var recorder = null;
+var mediaStream = null;
+var chunks = [];
+var isRecording = false;
+
+function setUserInfo() {
+  document.getElementById('user-badge').textContent = (currentUser.username || '当前用户') + ' · 保存后归属本人';
+}
+
+function showToast(message) {
+  var toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(function() {
+    toast.classList.remove('show');
+  }, 2400);
+}
+
+function setLoading(visible, text) {
+  document.getElementById('loading').style.display = visible ? 'flex' : 'none';
+  if (text) document.getElementById('loading-text').textContent = text;
+}
+
+function loadDemo() {
+  document.getElementById('source-text').value = '今天拜访了华北制造集团，客户对智能质检和语音外呼方案都很感兴趣，预计预算 120 万左右，目前倾向进入方案报价阶段，下周安排技术交流和演示，重点关注系统稳定性、交付周期和和现有系统的集成能力。';
+}
+
+function clearText() {
+  document.getElementById('source-text').value = '';
+}
+
+async function toggleRecord() {
+  if (isRecording) {
+    stopRecord();
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showToast('当前浏览器不支持录音');
+    return;
+  }
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    recorder = new MediaRecorder(mediaStream);
+    recorder.ondataavailable = function(event) {
+      if (event.data && event.data.size > 0) chunks.push(event.data);
+    };
+    recorder.onstop = uploadAudio;
+    recorder.start();
+    isRecording = true;
+    document.getElementById('record-btn').textContent = '结束录音';
+    document.getElementById('record-btn').classList.remove('idle');
+    document.getElementById('record-hint').textContent = '录音中，点击“结束录音”后会自动上传转写。';
+  } catch (error) {
+    showToast('无法访问麦克风，请检查权限');
+  }
+}
+
+function stopRecord() {
+  if (!recorder || recorder.state === 'inactive') return;
+  recorder.stop();
+  isRecording = false;
+  document.getElementById('record-btn').textContent = '开始录音';
+  document.getElementById('record-btn').classList.add('idle');
+  document.getElementById('record-hint').textContent = '正在上传音频并转写，请稍候。';
+}
+
+async function uploadAudio() {
+  try {
+    setLoading(true, '正在转写语音...');
+    var blob = new Blob(chunks, { type: recorder && recorder.mimeType ? recorder.mimeType : 'audio/webm' });
+    var formData = new FormData();
+    formData.append('audio', blob, 'voice.webm');
+    var response = await CRMApp.apiRequest('/api/ai/transcribe', { method: 'POST', body: formData });
+    document.getElementById('source-text').value = response && response.text ? response.text : '';
+    showToast('语音转写完成');
+  } catch (error) {
+    showToast(error.message || '语音转写失败');
+  } finally {
+    setLoading(false);
+    document.getElementById('record-hint').textContent = '录音完成后会自动转写到文本框，再由 AI 解析为结构化商机数据。';
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(function(track) { track.stop(); });
+      mediaStream = null;
+    }
+  }
+}
+
+async function runAI() {
+  var text = document.getElementById('source-text').value.trim();
+  if (!text) {
+    showToast('请先输入内容再解析');
+    return;
+  }
+
+  try {
+    setLoading(true, 'AI 正在解析文本...');
+    currentResult = await CRMApp.apiRequest('/api/ai/parse', {
+      method: 'POST',
+      body: { text: text }
+    });
+    renderResult();
+  } catch (error) {
+    showToast(error.message || 'AI 解析失败');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderResult() {
+  if (!currentResult) return;
+  document.getElementById('result-card').style.display = 'block';
+  document.getElementById('field-customer').textContent = currentResult.customer_name || '-';
+  document.getElementById('field-amount').textContent = '¥' + Number(currentResult.deal_value || 0).toLocaleString('zh-CN');
+  document.getElementById('field-stage').textContent = currentResult.stage || '-';
+  document.getElementById('field-needs').innerHTML = (currentResult.key_needs || []).length ? currentResult.key_needs.map(CRMApp.escapeHtml).join('<br>') : '-';
+  document.getElementById('field-next').textContent = currentResult.next_step || '-';
+  var score = Math.round(Number(currentResult.confidence_score || 0) * 100);
+  document.getElementById('field-score').textContent = score + '%';
+  document.getElementById('score-fill').style.width = score + '%';
+}
+
+function resetResult() {
+  currentResult = null;
+  document.getElementById('result-card').style.display = 'none';
+}
+
+async function saveOpportunity() {
+  if (!currentResult) return;
+
+  var score = Number(currentResult.confidence_score || 0);
+  var level = score >= 0.85 ? 'A' : (score >= 0.65 ? 'B' : 'C');
+
+  try {
+    setLoading(true, '正在保存商机...');
+    await CRMApp.apiRequest('/api/opportunities', {
+      method: 'POST',
+      body: {
+        name: (currentResult.customer_name || '未命名客户') + ' - AI录入',
+        stage: currentResult.stage || '初步接洽',
+        amount: Number(currentResult.deal_value || 0),
+        source: 'AI录入',
+        custom_fields: {
+          company: currentResult.customer_name || '',
+          customer_type: 'AI录入',
+          product: 'AI 智能录入',
+          level: level,
+          bcard: '',
+          demand: (currentResult.key_needs || []).join('；'),
+          approve: '',
+          signed: '否',
+          next_step: currentResult.next_step || ''
+        }
+      }
+    });
+
+    sessionHistory.unshift({
+      company: currentResult.customer_name || '未命名客户',
+      amount: Number(currentResult.deal_value || 0),
+      stage: currentResult.stage || '初步接洽',
+      nextStep: currentResult.next_step || '',
+      time: new Date().toLocaleString('zh-CN')
+    });
+
+    renderHistory();
+    showToast('商机已保存到当前账号名下');
+    resetResult();
+    clearText();
+  } catch (error) {
+    showToast(error.message || '保存商机失败');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderHistory() {
+  var el = document.getElementById('history-list');
+  if (!sessionHistory.length) {
+    el.className = 'hint';
+    el.textContent = '暂未保存任何商机。';
+    return;
+  }
+
+  el.className = '';
+  el.innerHTML = sessionHistory.map(function(item) {
+    return '<div class="history-item">' +
+      '<div class="history-title">' + CRMApp.escapeHtml(item.company) + ' · ¥' + Number(item.amount).toLocaleString('zh-CN') + '</div>' +
+      '<div class="history-meta">阶段：' + CRMApp.escapeHtml(item.stage) + '<br>下一步：' + CRMApp.escapeHtml(item.nextStep || '-') + '<br>保存时间：' + CRMApp.escapeHtml(item.time) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+if (currentUser) {
+  setUserInfo();
+  renderHistory();
+}
+</script>
+</body>
+</html>

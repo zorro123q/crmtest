@@ -1,0 +1,139 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add server to known hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Deploy to server
+      env:
+        SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        SERVER_USER: ${{ secrets.SERVER_USER }}
+        DEPLOY_PATH: /opt/salespilot
+      run: |
+        # 创建远程目录
+        ssh $SERVER_USER@$SERVER_HOST "mkdir -p $DEPLOY_PATH"
+        
+        # 同步代码（排除.git和node_modules）
+        rsync -avz --delete \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='backups' \
+          --exclude='logs' \
+          --exclude='nginx/ssl' \
+          ./ $SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/
+        
+        # 写入环境变量
+        ssh $SERVER_USER@$SERVER_HOST "echo '${{ secrets.ENV_FILE }}' > $DEPLOY_PATH/.env"
+        
+        # 执行部署
+        ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+          cd /opt/salespilot
+          
+          # 确保脚本可执行
+          chmod +x scripts/*.sh
+          
+          # 登录GitHub Container Registry
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          
+          # 拉取最新镜像
+          docker-compose pull
+          
+          # 重启服务
+          docker-compose up -d
+          
+          # 清理旧镜像
+          docker image prune -f
+          
+          # 健康检查
+          sleep 10
+          curl -sf http://localhost/api/health || exit 1
+          
+          echo "部署完成！"
+        EOF
+
+    - name: Cleanup
+      if: always()
+      run: rm -rf ~/.ssh
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: needs.deploy.result == 'success'
+      run: |
+        echo "✅ 部署成功！"
+        # 可以在这里添加企业微信/钉钉/Slack通知
+    
+    - name: Notify on failure
+      if: needs.deploy.result == 'failure'
+      run: |
+        echo "❌ 部署失败！"
+        # 可以在这里添加告警通知

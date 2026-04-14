@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商机看板 — SalesPilot CRM</title>
+<style>
+:root{--primary:#0EA5E9;--primary-light:#E0F2FE;--accent:#8B5CF6;--success:#10B981;--warning:#F59E0B;--danger:#EF4444;--bg:#F1F5F9;--surface:#FFFFFF;--border:#E2E8F0;--text:#1E293B;--text2:#64748B;--text3:#94A3B8;--shadow:0 1px 3px rgba(15,23,42,0.08),0 4px 12px rgba(15,23,42,0.04);--shadow-lg:0 10px 25px rgba(15,23,42,0.15)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+.sidebar{width:240px;background:linear-gradient(180deg,#0F172A 0%,#1E3A5F 50%,#0F172A 100%);color:#CBD5E1;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;position:relative}
+.logo{padding:24px 20px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06)}
+.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#0EA5E9,#6366F1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo-text{font-size:18px;font-weight:700;background:linear-gradient(135deg,#fff,#0EA5E9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:10px;color:#64748B;margin-top:2px}
+.nav-section{padding:16px 0 8px}
+.nav-label{font-size:10px;font-weight:600;color:#475569;letter-spacing:1px;text-transform:uppercase;padding:0 20px 6px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;font-size:14px;border-left:3px solid transparent;transition:all .2s;color:#94A3B8;text-decoration:none}
+.nav-item:hover{background:rgba(14,165,233,.08);color:#E2E8F0}
+.nav-item.active{background:linear-gradient(90deg,rgba(14,165,233,.15) 0%,transparent 100%);color:#fff;font-weight:600;border-left-color:#0EA5E9}
+.nav-item .icon{font-size:18px;width:22px;text-align:center}
+.nav-badge{margin-left:auto;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-size:10px;border-radius:12px;padding:2px 8px;font-weight:700}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:linear-gradient(145deg,#FFFFFF,#F8FAFC);border-bottom:1px solid var(--border);padding:0 28px;height:64px;display:flex;align-items:center;gap:20px}
+.topbar-title{font-size:20px;font-weight:700;color:var(--text);flex:1}
+.topbar-sub{font-size:13px;color:var(--text3);font-weight:400;margin-left:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0EA5E9,#6366F1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}
+.content{flex:1;overflow-y:auto;padding:24px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:15px;font-weight:700}
+.kanban-board{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;min-height:500px}
+.kanban-col{flex-shrink:0;width:260px}
+.kanban-header{padding:14px 16px;border-radius:10px 10px 0 0;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff}
+.kanban-header .col-count{background:rgba(255,255,255,.25);border-radius:10px;padding:2px 8px;font-size:11px}
+.kanban-body{background:linear-gradient(180deg,#F8FAFC,#F1F5F9);border-radius:0 0 10px 10px;padding:12px;min-height:400px;display:flex;flex-direction:column;gap:10px}
+.kanban-card{background:var(--surface);border-radius:10px;padding:14px;box-shadow:var(--shadow);cursor:grab;border-left:3px solid transparent}
+.kanban-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.k-company{font-size:14px;font-weight:700;margin-bottom:6px}
+.k-amount{font-size:16px;font-weight:800;color:var(--primary)}
+.k-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.k-owner{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.k-avatar{width:22px;height:22px;border-radius:6px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+.k-date{font-size:12px;color:var(--text3)}
+.tag{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.tag-blue{background:#EFF6FF;color:#1D4ED8}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">🚀</div>
+    <div><div class="logo-text">SalesPilot</div><div class="logo-sub">CRM · AI Powered</div></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">概览</div>
+    <a class="nav-item" href="page-dashboard.html"><span class="icon">📊</span>销售仪表盘</a>
+    <a class="nav-item" href="page-funnel.html"><span class="icon">🔻</span>商机漏斗</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">销售管理</div>
+    <a class="nav-item active" href="page-kanban.html"><span class="icon">🗂️</span>商机看板<span class="nav-badge">12</span></a>
+    <a class="nav-item" href="page-leads.html"><span class="icon">👥</span>线索管理<span class="nav-badge">8</span></a>
+    <a class="nav-item" href="page-opportunities.html"><span class="icon">💼</span>商机列表</a>
+    <a class="nav-item" href="page-report.html"><span class="icon">📋</span>商机通报</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">AI 能力</div>
+    <a class="nav-item" href="ai-input.html"><span class="icon">🤖</span>AI 智能录入</a>
+    <a class="nav-item" href="card-input.html"><span class="icon">🎯</span>价值评估</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">配置</div>
+    <a class="nav-item" href="page-metadata.html"><span class="icon">⚙️</span>元数据配置</a>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title">商机看板 <span class="topbar-sub">拖拽式阶段管理</span></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost">🔽 筛选</button>
+      <button class="btn btn-primary" onclick="location.href='page-opportunities.html?action=new'">➕ 新建</button>
+    </div>
+    <div class="avatar">管</div>
+  </div>
+
+  <div class="content">
+    <div class="section-header">
+      <div>
+        <div class="section-title">商机看板</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">拖拽卡片可更改阶段 · 12 个活跃商机</div>
+      </div>
+    </div>
+    <div class="kanban-board" id="kanban-board"></div>
+  </div>
+</div>
+
+<script>
+var opps = [
+  {id:1,company:'北京保险集团',name:'智能客服升级',amount:280,stage:'方案认可',owner:'张三',type:'老客户',probability:75},
+  {id:2,company:'上海物流公司',name:'呼叫中心建设',amount:150,stage:'有效接触',owner:'李四',type:'新客户',probability:30},
+  {id:3,company:'深圳科技集团',name:'AI质检部署',amount:420,stage:'签约回款',owner:'王五',type:'老客户',probability:95},
+  {id:4,company:'广州零售连锁',name:'会员营销系统',amount:85,stage:'收集信息',owner:'赵六',type:'新客户',probability:10},
+  {id:5,company:'杭州电商平台',name:'智能外呼机器人',amount:200,stage:'方案认可',owner:'张三',type:'老客户',probability:70},
+  {id:6,company:'成都制造企业',name:'智能客服系统',amount:120,stage:'拿到预算',owner:'李四',type:'新客户',probability:50},
+  {id:7,company:'武汉通信运营商',name:'人机协同平台',amount:350,stage:'方案认可',owner:'王五',type:'老客户',probability:80},
+  {id:8,company:'南京政务服务',name:'12345热线升级',amount:180,stage:'收集信息',owner:'赵六',type:'新客户',probability:15},
+  {id:9,company:'北京保险集团',name:'催收机器人',amount:95,stage:'签约回款',owner:'张三',type:'老客户',probability:90},
+  {id:10,company:'上海物流公司',name:'物流客服外包',amount:65,stage:'有效接触',owner:'李四',type:'新客户',probability:35},
+  {id:11,company:'深圳科技集团',name:'智能培训系统',amount:160,stage:'拿到预算',owner:'王五',type:'老客户',probability:55},
+  {id:12,company:'广州零售连锁',name:'门店客服系统',amount:75,stage:'收集信息',owner:'赵六',type:'新客户',probability:10}
+];
+
+var stages = ['收集信息','有效接触','拿到预算','方案认可','签约回款'];
+var stageColors = {'收集信息':'#94A3B8','有效接触':'#0EA5E9','拿到预算':'#8B5CF6','方案认可':'#F59E0B','签约回款':'#10B981'};
+var ownerColors = {'张三':'#3B82F6','李四':'#10B981','王五':'#8B5CF6','赵六':'#F59E0B'};
+
+function renderKanban() {
+  var board = document.getElementById('kanban-board');
+  var html = '';
+  stages.forEach(function(stage) {
+    var stageOpps = opps.filter(function(o){return o.stage === stage});
+    html += '<div class="kanban-col"><div class="kanban-header"><span>'+stage+'</span><span class="col-count">'+stageOpps.length+'</span></div><div class="kanban-body">';
+    stageOpps.forEach(function(o) {
+      html += '<div class="kanban-card" style="border-left-color:'+stageColors[stage]+'"><div class="k-company">'+o.company+'</div><div style="font-size:12px;color:var(--text2)">'+o.name+'</div><div class="k-amount">¥'+o.amount+'万</div><div class="k-meta"><div class="k-owner"><div class="k-avatar" style="background:'+ownerColors[o.owner]+'">'+o.owner[0]+'</div>'+o.owner+'</div><span class="tag tag-blue">'+o.probability+'%</span></div></div>';
+    });
+    html += '</div></div>';
+  });
+  board.innerHTML = html;
+}
+
+// 检查用户权限
+function checkPermission() {
+  var user = localStorage.getItem('crm_user');
+  if (!user) {
+    window.location.href = 'login.html';
+    return null;
+  }
+  return JSON.parse(user);
+}
+
+// 页面加载时检查权限
+document.addEventListener('DOMContentLoaded', function() {
+  checkPermission();
+  renderKanban();
+});
+</script>
+</body>
+</html>

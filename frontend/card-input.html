@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SalesPilot · 商机价值评估</title>
+<style>
+:root{
+  --primary:#0EA5E9; --primary-dark:#0284C7; --primary-light:#E0F2FE;
+  --accent:#8B5CF6; --success:#10B981; --warning:#F59E0B; --danger:#EF4444;
+  --bg:#F1F5F9; --surface:#fff; --border:#E2E8F0;
+  --text:#1E293B; --text2:#64748B; --text3:#94A3B8;
+  --radius:16px; --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--text)}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+
+/* 顶栏 */
+.header{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);padding:16px 20px 20px;padding-top:calc(16px + env(safe-area-inset-top,0px));color:#fff;flex-shrink:0}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.header-back{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:none;color:#fff}
+.header-title{font-size:18px;font-weight:700}
+.header-link{font-size:12px;color:rgba(255,255,255,.8);text-decoration:none;background:rgba(255,255,255,.15);padding:5px 12px;border-radius:20px}
+.header-tabs{display:flex;gap:8px;margin-top:16px}
+.tab-btn{flex:1;padding:10px 16px;background:rgba(255,255,255,.15);border:none;border-radius:10px;color:rgba(255,255,255,.8);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.tab-btn.active{background:#fff;color:var(--primary);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+
+/* 主体 */
+.scroll-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(100px + var(--safe-bottom));-webkit-overflow-scrolling:touch}
+
+/* 卡片 */
+.card{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:14px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title .icon{width:24px;height:24px;background:linear-gradient(135deg,#0EA5E9,#8B5CF6);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+
+/* 录音区 */
+.record-area{display:flex;flex-direction:column;align-items:center;padding:20px 0 16px}
+.record-main-btn{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#EF4444,#DC2626);border:none;color:#fff;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(239,68,68,.4);transition:all .2s;position:relative;flex-shrink:0}
+.record-main-btn.idle{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);box-shadow:0 6px 20px rgba(14,165,233,.4)}
+.record-main-btn.recording{animation:recPulse 1.2s ease-in-out infinite}
+@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 16px rgba(239,68,68,0)}}
+.record-hint{font-size:13px;color:var(--text2);margin-top:12px;font-weight:500}
+.record-timer{font-size:20px;font-weight:800;color:var(--danger);margin-top:6px;font-variant-numeric:tabular-nums;min-height:28px}
+
+/* 波形 */
+.waveform{display:flex;align-items:center;gap:3px;height:32px;margin-top:8px}
+.waveform-bar{width:4px;background:var(--danger);border-radius:2px;animation:wave 1s ease-in-out infinite}
+.waveform-bar:nth-child(1){animation-delay:0s;height:8px}
+.waveform-bar:nth-child(2){animation-delay:.15s;height:16px}
+.waveform-bar:nth-child(3){animation-delay:.3s;height:24px}
+.waveform-bar:nth-child(4){animation-delay:.15s;height:16px}
+.waveform-bar:nth-child(5){animation-delay:0s;height:8px}
+@keyframes wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(2.5)}}
+.waveform.hidden{visibility:hidden}
+
+/* 文本框 */
+.textarea{width:100%;border:1.5px solid var(--border);border-radius:12px;padding:14px;font-size:14px;line-height:1.7;min-height:100px;resize:none;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s;background:#FAFBFC}
+.textarea:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(14,165,233,.1)}
+
+/* 按钮 */
+.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .15s;width:100%}
+.btn-primary{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);color:#fff;box-shadow:0 4px 14px rgba(14,165,233,.35)}
+.btn-primary:active{transform:scale(.97)}
+.btn-secondary{background:var(--bg);color:var(--text2);border:1.5px solid var(--border)}
+.btn-secondary:active{background:#e2e8f0}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+
+/* 评分结果 */
+.score-card{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);border-radius:var(--radius);padding:24px;text-align:center;color:#fff;margin-bottom:16px}
+.score-value{font-size:56px;font-weight:800;line-height:1}
+.score-label{font-size:14px;opacity:.85;margin-top:4px}
+.score-grade{display:inline-block;margin-top:12px;padding:6px 20px;background:rgba(255,255,255,.2);border-radius:20px;font-size:16px;font-weight:700}
+.score-grade.A{background:#10B981}.score-grade.B{background:#3B82F6}.score-grade.C{background:#F59E0B}.score-grade.D{background:#EF4444}.score-grade.E{background:#6B7280}
+
+/* 评分明细 */
+.dimension-list{display:flex;flex-direction:column;gap:8px}
+.dimension-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg);border-radius:10px}
+.dimension-name{font-size:13px;font-weight:600;color:var(--text)}
+.dimension-score{display:flex;align-items:center;gap:8px}
+.dimension-val{font-size:14px;font-weight:700;color:var(--primary)}
+.dimension-bar{width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.dimension-fill{height:100%;background:linear-gradient(90deg,#0EA5E9,#8B5CF6);border-radius:3px}
+
+/* 评级说明 */
+.rating-desc{background:var(--bg);border-radius:12px;padding:14px;margin-top:8px}
+.rating-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
+.rating-item{font-size:12px;color:var(--text2);line-height:1.6;padding:4px 0}
+
+/* 建议 */
+.suggestion-box{background:#FEF3C7;border-radius:12px;padding:14px;margin-top:12px;border-left:4px solid var(--warning)}
+.suggestion-title{font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px}
+.suggestion-text{font-size:13px;color:#B45309;line-height:1.6}
+
+/* 底部操作 */
+.bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:12px 16px;padding-bottom:calc(12px + var(--safe-bottom));z-index:100}
+.bottom-bar .btn{margin-bottom:8px}
+.bottom-bar .btn:last-child{margin-bottom:0}
+
+/* Loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:16px}
+.loading-spinner{width:48px;height:48px;border:4px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;font-weight:600;color:var(--text2)}
+
+/* Toast */
+.toast{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%) translateY(-20px);background:#1E293B;color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:all .3s;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 客户信息输入 */
+.form-group{margin-bottom:14px}
+.form-label{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block}
+.form-input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;background:#FAFBFC}
+.form-input:focus{border-color:var(--primary);background:#fff}
+.form-select{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;background:#FAFBFC;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+/* 隐藏/显示 */
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="header">
+  <div class="header-top">
+    <button class="header-back" onclick="location.href='index.html'">←</button>
+    <div class="header-title">🎯 商机价值评估</div>
+    <a href="crm-system.html" class="header-link">桌面版 →</a>
+  </div>
+  <div class="header-tabs">
+    <button class="tab-btn active" data-tab="a-card" onclick="switchTab('a-card')">A卡 · 客户意向</button>
+    <button class="tab-btn" data-tab="b-card" onclick="switchTab('b-card')">B卡 · 商机评估</button>
+  </div>
+</div>
+
+<!-- 主体 -->
+<div class="scroll-body">
+
+  <!-- A卡评分 -->
+  <div id="a-card-view">
+    <!-- 客户信息 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🏢</span>客户基本信息</div>
+      <div class="form-group">
+        <label class="form-label">客户名称</label>
+        <input type="text" class="form-input" id="a-company" placeholder="请输入客户公司名称">
+      </div>
+      <div class="form-group">
+        <label class="form-label">客户行业</label>
+        <select class="form-select" id="a-industry">
+          <option value="">请选择行业</option>
+          <option value="金融">金融（银行、保险、证券）</option>
+          <option value="物流">物流（快递、物流运输）</option>
+          <option value="零售">零售（电商、连锁商超）</option>
+          <option value="制造">制造业</option>
+          <option value="通信">通信运营商</option>
+          <option value="政务">政务服务</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 录音区 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🎤</span>语音描述客户情况</div>
+      <div class="record-area">
+        <button class="record-main-btn idle" id="recordBtn" onclick="toggleRecord()">
+          <span id="recordIcon">🎤</span>
+        </button>
+        <div class="record-hint" id="recordHint">点击开始录音</div>
+        <div class="record-timer" id="recordTimer"></div>
+        <div class="waveform hidden" id="waveform">
+          <div class="waveform-bar"></div><div class="waveform-bar"></div><div class="waveform-bar"></div>
+          <div class="waveform-bar"></div><div class="waveform-bar"></div>
+        </div>
+      </div>
+      <textarea class="textarea" id="a-text" placeholder="或直接在此输入客户情况描述，AI将自动提取评分维度信息..."></textarea>
+    </div>
+
+    <!-- 手动评分维度 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span>快速评分（如已知晓）</div>
+      <div class="dimension-list">
+        <div class="dimension-item">
+          <span class="dimension-name">客户行业</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-industry">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">行业排名</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-rank">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">客户场景</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-scenario">-</span>/10
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">客户预算</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-budget">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">人力成本</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-labor">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">项目推动领导分管</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-leadership">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">招标形式</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-bid">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">客服人数</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-headcount">-</span>/5
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">客户所在区域</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-region">-</span>/10
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 评估按钮 -->
+    <button class="btn btn-primary" onclick="evaluateA()">✨ 评估客户意向</button>
+  </div>
+
+  <!-- B卡评分 -->
+  <div id="b-card-view" class="hidden">
+    <!-- 商机信息 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">💼</span>商机基本信息</div>
+      <div class="form-group">
+        <label class="form-label">客户名称</label>
+        <input type="text" class="form-input" id="b-company" placeholder="请输入客户公司名称">
+      </div>
+      <div class="form-group">
+        <label class="form-label">商机名称</label>
+        <input type="text" class="form-input" id="b-opportunity" placeholder="请输入商机名称">
+      </div>
+      <div class="form-group">
+        <label class="form-label">预估金额（万元）</label>
+        <input type="number" class="form-input" id="b-amount" placeholder="请输入预估合同金额">
+      </div>
+    </div>
+
+    <!-- 录音区 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">🎤</span>语音描述商机情况</div>
+      <div class="record-area">
+        <button class="record-main-btn idle" id="recordBtnB" onclick="toggleRecordB()">
+          <span id="recordIconB">🎤</span>
+        </button>
+        <div class="record-hint" id="recordHintB">点击开始录音</div>
+        <div class="record-timer" id="recordTimerB"></div>
+        <div class="waveform hidden" id="waveformB">
+          <div class="waveform-bar"></div><div class="waveform-bar"></div><div class="waveform-bar"></div>
+          <div class="waveform-bar"></div><div class="waveform-bar"></div>
+        </div>
+      </div>
+      <textarea class="textarea" id="b-text" placeholder="或直接在此输入商机情况描述，AI将自动提取评分维度信息..."></textarea>
+    </div>
+
+    <!-- 手动评分维度 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span>快速评分（如已知晓）</div>
+      <div class="dimension-list">
+        <div class="dimension-item">
+          <span class="dimension-name">客户需求匹配度</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-match">-</span>/15
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">预算明确性</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-budgetClear">-</span>/10
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">决策链清晰度</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-decision">-</span>/10
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">竞争分析</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-competition">-</span>/10
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">方案可行性</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-feasibility">-</span>/10
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">客户合作意向</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-intent">-</span>/15
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">项目时间紧迫性</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-timeline">-</span>/10
+          </div>
+        </div>
+        <div class="dimension-item">
+          <span class="dimension-name">历史合作记录</span>
+          <div class="dimension-score">
+            <span class="dimension-val" id="score-history">-</span>/10
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 评估按钮 -->
+    <button class="btn btn-primary" onclick="evaluateB()">✨ 评估商机价值</button>
+  </div>
+
+  <!-- 评估结果 -->
+  <div id="result-view" class="hidden">
+    <div class="score-card">
+      <div class="score-value" id="totalScore">0</div>
+      <div class="score-label">综合评分</div>
+      <div class="score-grade" id="scoreGrade">E</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span>评分明细</div>
+      <div class="dimension-list" id="result-dimensions"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">💡</span>评级说明</div>
+      <div class="rating-desc">
+        <div class="rating-item" id="ratingDesc"></div>
+      </div>
+      <div class="suggestion-box" id="suggestionBox">
+        <div class="suggestion-title">📌 跟进建议</div>
+        <div class="suggestion-text" id="suggestionText"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="resetForm()">🔄 重新评估</button>
+  </div>
+
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay hidden" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">AI 评估中...</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script type="text/plain" id="legacy-card-input-script">
+// A卡评分维度配置
+const A_CARD_DIMS = {
+  industry: {name:'客户行业', max:5, weights:{'金融':5,'保险':5,'物流':4,'通信':5,'零售':4,'制造':4,'政务':5,'其他':3}},
+  rank: {name:'行业排名', max:5, weights:{'TOP3':5,'前十':4,'11-20':3,'20-30':2,'30后':1,'未知':2}},
+  scenario: {name:'客户场景', max:10, weights:{'智能回访':10,'金融催收':10,'语音客服':8,'外呼营销':8,'智能质检':10,'人机协同':8,'其他':5}},
+  budget: {name:'客户预算', max:5, weights:{'300万以上':5,'200-300万':4,'100-200万':3,'50-100万':2,'50万以下':1,'未知':2}},
+  labor: {name:'人力成本', max:5, weights:{'6000以上':5,'5000-6000':4,'4000-5000':3,'4000以下':2,'未知':3}},
+  leadership: {name:'项目推动领导分管', max:5, weights:{'分管技术与业务':5,'分管业务':3,'分管技术':1,'仅业务':3,'未知':2}},
+  bid: {name:'招标形式', max:5, weights:{'单一来源':5,'邀标可控':4,'公开招标':2,'竞标':3,'未知':3}},
+  headcount: {name:'客服人数', max:5, weights:{'500以上':5,'300-500':4,'100-300':3,'100以下':2,'未知':3}},
+  region: {name:'客户所在区域', max:10, weights:{'一线城市':10,'省会':6,'二三线':4,'其他':2,'未知':3}}
+};
+
+// B卡评分维度配置（商机到合同P2C）
+const B_CARD_DIMS = {
+  match: {name:'客户需求匹配度', max:15, weights:{'高度匹配':15,'匹配':12,'一般':8,'较差':4}},
+  budgetClear: {name:'预算明确性', max:10, weights:{'明确':10,'较明确':7,'不明确':3,'待定':5}},
+  decision: {name:'决策链清晰度', max:10, weights:{'清晰':10,'较清晰':7,'不清晰':3,'未知':4}},
+  competition: {name:'竞争分析', max:10, weights:{'优势明显':10,'略有优势':7,'均势':5,'劣势':2}},
+  feasibility: {name:'方案可行性', max:10, weights:{'可行':10,'较可行':7,'有难度':4,'难':2}},
+  intent: {name:'客户合作意向', max:15, weights:{'强烈':15,'较强':12,'一般':6,'较弱':3,'无':1}},
+  timeline: {name:'项目时间紧迫性', max:10, weights:{'紧急':10,'较急':7,'一般':5,'不急':3}},
+  history: {name:'历史合作记录', max:10, weights:{'多次合作':10,'一次合作':7,'有接触':4,'全新客户':5}}
+};
+
+// 评级配置
+const GRADES = {
+  A:{min:70, label:'A级 - 重点跟进', desc:'70分以上，值得重点跟进，建议每周联系1-2次', color:'#10B981'},
+  B:{min:60, label:'B级 - 值得跟进', desc:'60-70分，值得现场跟进，建议每月联系1-2次', color:'#3B82F6'},
+  C:{min:40, label:'C级 - 保持联系', desc:'40-60分，先电话会议跟进，建议每月至少1次', color:'#F59E0B'},
+  D:{min:20, label:'D级 - 维持联系', desc:'20-40分，保持联系，跟进周期每2月至少1次', color:'#EF4444'},
+  E:{min:0, label:'E级 - 无价值', desc:'20分以下，无价值，保持基本联系即可', color:'#6B7280'}
+};
+
+let currentTab = 'a-card';
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingTimer = null;
+let recordingSeconds = 0;
+
+// Tab切换
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+  document.getElementById('a-card-view').classList.toggle('hidden', tab !== 'a-card');
+  document.getElementById('b-card-view').classList.toggle('hidden', tab !== 'b-card');
+  document.getElementById('result-view').classList.add('hidden');
+}
+
+// 录音功能
+let isRecording = false;
+
+function toggleRecord() {
+  if (isRecording) {
+    stopRecord();
+  } else {
+    startRecord('a-text', 'recordBtn', 'recordIcon', 'recordHint', 'recordTimer', 'waveform');
+  }
+}
+
+function toggleRecordB() {
+  if (isRecording) {
+    stopRecord();
+  } else {
+    startRecord('b-text', 'recordBtnB', 'recordIconB', 'recordHintB', 'recordTimerB', 'waveformB');
+  }
+}
+
+async function startRecord(textAreaId, btnId, iconId, hintId, timerId, waveId) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      const audioBlob = new Blob(audioChunks, {type:'audio/webm'});
+      const textArea = document.getElementById(textAreaId);
+      textArea.value += '\n[语音录入中...]';
+      
+      // 模拟语音转文字（实际接入已切换到 paraformer-v2）
+      showToast('语音已录制，请补充描述或点击评估');
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    
+    document.getElementById(btnId).classList.remove('idle');
+    document.getElementById(btnId).classList.add('recording');
+    document.getElementById(iconId).innerHTML = '⏹';
+    document.getElementById(hintId).innerText = '录音中...';
+    document.getElementById(waveId).classList.remove('hidden');
+    
+    recordingSeconds = 0;
+    recordingTimer = setInterval(() => {
+      recordingSeconds++;
+      const mins = Math.floor(recordingSeconds / 60).toString().padStart(2,'0');
+      const secs = (recordingSeconds % 60).toString().padStart(2,'0');
+      document.getElementById(timerId).innerText = `${mins}:${secs}`;
+    }, 1000);
+    
+  } catch(e) {
+    showToast('无法访问麦克风，请检查权限');
+  }
+}
+
+function stopRecord() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+  }
+  isRecording = false;
+  
+  document.querySelectorAll('.record-main-btn').forEach(btn => {
+    btn.classList.remove('recording');
+    btn.classList.add('idle');
+  });
+  document.getElementById('recordIcon').innerHTML = '🎤';
+  document.getElementById('recordIconB').innerHTML = '🎤';
+  document.getElementById('recordHint').innerText = '点击开始录音';
+  document.getElementById('recordHintB').innerText = '点击开始录音';
+  document.getElementById('waveform').classList.add('hidden');
+  document.getElementById('waveformB').classList.add('hidden');
+  
+  if (recordingTimer) {
+    clearInterval(recordingTimer);
+    recordingTimer = null;
+  }
+  document.getElementById('recordTimer').innerText = '';
+  document.getElementById('recordTimerB').innerText = '';
+}
+
+// A卡评估
+function evaluateA() {
+  const company = document.getElementById('a-company').value.trim();
+  const industry = document.getElementById('a-industry').value;
+  const text = document.getElementById('a-text').value;
+  
+  if (!company && !text) {
+    showToast('请输入客户名称或描述');
+    return;
+  }
+
+  showLoading();
+  
+  // 模拟AI分析（实际需要接入GPT-4）
+  setTimeout(() => {
+    const scores = analyzeAText(text, industry);
+    displayResult(scores, 'A');
+    hideLoading();
+  }, 1500);
+}
+
+// B卡评估
+function evaluateB() {
+  const company = document.getElementById('b-company').value.trim();
+  const amount = document.getElementById('b-amount').value;
+  const text = document.getElementById('b-text').value;
+  
+  if (!company && !text) {
+    showToast('请输入商机名称或描述');
+    return;
+  }
+
+  showLoading();
+  
+  // 模拟AI分析
+  setTimeout(() => {
+    const scores = analyzeBText(text, amount);
+    displayResult(scores, 'B');
+    hideLoading();
+  }, 1500);
+}
+
+// 分析A卡文本（模拟AI提取）
+function analyzeAText(text, industry) {
+  const scores = {};
+  const lowerText = text.toLowerCase();
+  
+  // 行业评分
+  scores.industry = industry ? (A_CARD_DIMS.industry.weights[industry] || 3) : 
+    (lowerText.includes('金融') ? 5 : lowerText.includes('保险') ? 5 : 
+     lowerText.includes('物流') ? 4 : lowerText.includes('制造') ? 4 : 3);
+  
+  // 行业排名
+  scores.rank = lowerText.includes('top3') || lowerText.includes('前三') ? 5 :
+    lowerText.includes('前十') ? 4 : lowerText.includes('11-20') ? 3 : 3;
+  
+  // 客户场景
+  scores.scenario = lowerText.includes('智能回访') || lowerText.includes('回访') ? 10 :
+    lowerText.includes('催收') ? 10 : lowerText.includes('外呼') ? 8 :
+    lowerText.includes('质检') ? 10 : lowerText.includes('客服') ? 8 : 6;
+  
+  // 预算
+  scores.budget = lowerText.includes('300万') || lowerText.includes('300w') ? 5 :
+    lowerText.includes('200万') || lowerText.includes('200w') ? 4 :
+    lowerText.includes('100万') || lowerText.includes('100w') ? 3 : 2;
+  
+  // 人力成本
+  scores.labor = lowerText.includes('6000') ? 5 : lowerText.includes('5000') ? 4 :
+    lowerText.includes('4000') ? 3 : 3;
+  
+  // 领导分管
+  scores.leadership = lowerText.includes('分管业务') && lowerText.includes('技术') ? 5 :
+    lowerText.includes('分管业务') ? 3 : lowerText.includes('分管技术') ? 1 : 3;
+  
+  // 招标形式
+  scores.bid = lowerText.includes('单一来源') ? 5 : lowerText.includes('邀标') ? 4 :
+    lowerText.includes('公开招标') ? 2 : 3;
+  
+  // 客服人数
+  scores.headcount = lowerText.includes('500') || lowerText.includes('500人') ? 5 :
+    lowerText.includes('300') ? 4 : lowerText.includes('100') ? 3 : 3;
+  
+  // 区域
+  scores.region = lowerText.includes('北京') || lowerText.includes('上海') || 
+    lowerText.includes('广州') || lowerText.includes('深圳') || lowerText.includes('一线') ? 10 :
+    lowerText.includes('省会') ? 6 : 4;
+    
+  return scores;
+}
+
+// 分析B卡文本
+function analyzeBText(text, amount) {
+  const scores = {};
+  const lowerText = text.toLowerCase();
+  
+  // 需求匹配度
+  scores.match = lowerText.includes('高度匹配') || lowerText.includes('完全匹配') ? 15 :
+    lowerText.includes('匹配') ? 12 : lowerText.includes('一般') ? 8 : 8;
+  
+  // 预算明确性
+  if (amount) {
+    scores.budgetClear = parseInt(amount) >= 100 ? 10 : parseInt(amount) >= 50 ? 7 : 5;
+  } else {
+    scores.budgetClear = lowerText.includes('预算明确') ? 10 : lowerText.includes('预算') ? 7 : 5;
+  }
+  
+  // 决策链
+  scores.decision = lowerText.includes('决策链清晰') || lowerText.includes('决策人明确') ? 10 :
+    lowerText.includes('老板') || lowerText.includes('总经理') ? 8 : 6;
+  
+  // 竞争分析
+  scores.competition = lowerText.includes('优势') || lowerText.includes('竞争力强') ? 10 :
+    lowerText.includes('竞品') ? 5 : 7;
+  
+  // 可行性
+  scores.feasibility = lowerText.includes('可行') || lowerText.includes('可以做') ? 10 :
+    lowerText.includes('难度') ? 4 : 7;
+  
+  // 意向
+  scores.intent = lowerText.includes('强烈') ? 15 : lowerText.includes('意向') ? 12 :
+    lowerText.includes('考虑') ? 6 : 8;
+  
+  // 时间紧迫性
+  scores.timeline = lowerText.includes('紧急') || lowerText.includes('急') || lowerText.includes('加急') ? 10 :
+    lowerText.includes('不急') || lowerText.includes('慢慢') ? 3 : 6;
+  
+  // 历史合作
+  scores.history = lowerText.includes('合作过') || lowerText.includes('老客户') ? 10 :
+    lowerText.includes('有接触') ? 4 : 5;
+    
+  return scores;
+}
+
+// 显示结果
+function displayResult(scores, cardType) {
+  const dims = cardType === 'A' ? A_CARD_DIMS : B_CARD_DIMS;
+  let total = 0;
+  let maxTotal = 0;
+  let html = '';
+  
+  for (const key in dims) {
+    const score = scores[key] || 0;
+    const max = dims[key].max;
+    total += score;
+    maxTotal += max;
+    const pct = (score / max) * 100;
+    
+    html += `<div class="dimension-item">
+      <span class="dimension-name">${dims[key].name}</span>
+      <div class="dimension-score">
+        <div class="dimension-bar"><div class="dimension-fill" style="width:${pct}%"></div></div>
+        <span class="dimension-val">${score}</span>/${max}
+      </div>
+    </div>`;
+  }
+  
+  document.getElementById('result-dimensions').innerHTML = html;
+  document.getElementById('totalScore').innerText = total;
+  
+  // 评级
+  let grade = 'E';
+  for (const g in GRADES) {
+    if (total >= GRADES[g].min) {
+      grade = g;
+      break;
+    }
+  }
+  
+  const gradeEl = document.getElementById('scoreGrade');
+  gradeEl.innerText = grade;
+  gradeEl.className = 'score-grade ' + grade;
+  
+  // 说明
+  document.getElementById('ratingDesc').innerText = GRADES[grade].desc;
+  document.getElementById('suggestionText').innerText = getSuggestion(grade, cardType);
+  
+  // 切换视图
+  document.getElementById('a-card-view').classList.add('hidden');
+  document.getElementById('b-card-view').classList.add('hidden');
+  document.getElementById('result-view').classList.remove('hidden');
+}
+
+function getSuggestion(grade, cardType) {
+  if (cardType === 'A') {
+    if (grade === 'A') return '⭐ 重点客户！建议本周内安排销售负责人现场拜访，明确需求和预算，争取月度内完成签约。';
+    if (grade === 'B') return '优质线索。建议2周内安排电话会议或线上演示，保持每周1次沟通节奏。';
+    if (grade === 'C') return '普通线索。建议每月保持1次电话沟通，了解客户动态，挖掘需求。';
+    if (grade === 'D') return '低优先级。每2月跟进1次即可，关注是否有重大变化。';
+    return '暂无价值。保持基本关注即可，无需投入过多资源。';
+  } else {
+    if (grade === 'A') return '高价值商机！建议立即启动签约流程，协调技术团队提前准备方案演示，缩短决策周期。';
+    if (grade === 'B') return '良好商机。建议2周内安排客户考察或POC演示，推进决策链明确。';
+    if (grade === 'C') return '一般商机。继续深入沟通，明确客户痛点和预算，挖掘增量需求。';
+    if (grade === 'D') return '较弱商机。保持关注但控制投入，了解客户实际采购计划。';
+    return '暂未形成有效商机。建议暂时搁置，后续持续观察。';
+  }
+}
+
+function resetForm() {
+  document.getElementById('a-company').value = '';
+  document.getElementById('a-industry').value = '';
+  document.getElementById('a-text').value = '';
+  document.getElementById('b-company').value = '';
+  document.getElementById('b-opportunity').value = '';
+  document.getElementById('b-amount').value = '';
+  document.getElementById('b-text').value = '';
+  
+  document.getElementById('result-view').classList.add('hidden');
+  document.getElementById('a-card-view').classList.remove('hidden');
+}
+
+function showLoading() {
+  document.getElementById('loading').classList.remove('hidden');
+}
+
+function hideLoading() {
+  document.getElementById('loading').classList.add('hidden');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+<script>
+(() => {
+  const CARD_INPUT_API_PATHS = {
+    evaluate: '/card-evaluations/evaluate',
+    transcribe: '/card-evaluations/transcribe'
+  };
+
+  const CARD_INPUT_PREVIEW_IDS = {
+    A: {
+      industry: 'score-industry',
+      rank: 'score-rank',
+      scenario: 'score-scenario',
+      budget: 'score-budget',
+      labor: 'score-labor',
+      leadership: 'score-leadership',
+      bid: 'score-bid',
+      headcount: 'score-headcount',
+      region: 'score-region'
+    },
+    B: {
+      match: 'score-match',
+      budget_clear: 'score-budgetClear',
+      decision: 'score-decision',
+      competition: 'score-competition',
+      feasibility: 'score-feasibility',
+      intent: 'score-intent',
+      timeline: 'score-timeline',
+      history: 'score-history'
+    }
+  };
+
+  const CARD_INPUT_RECORD_CONTEXTS = {
+    a: {
+      textAreaId: 'a-text',
+      btnId: 'recordBtn',
+      iconId: 'recordIcon',
+      hintId: 'recordHint',
+      timerId: 'recordTimer',
+      waveId: 'waveform'
+    },
+    b: {
+      textAreaId: 'b-text',
+      btnId: 'recordBtnB',
+      iconId: 'recordIconB',
+      hintId: 'recordHintB',
+      timerId: 'recordTimerB',
+      waveId: 'waveformB'
+    }
+  };
+
+  let cardInputActiveRecorder = null;
+  const cardInputDefaultLoadingText = 'AI 评估中...';
+
+  function updatePreviewScores(result) {
+    const idMap = CARD_INPUT_PREVIEW_IDS[result.card_type];
+    if (!idMap) {
+      return;
+    }
+    result.dimensions.forEach((dimension) => {
+      const elementId = idMap[dimension.key];
+      if (elementId) {
+        document.getElementById(elementId).innerText = dimension.score;
+      }
+    });
+  }
+
+  function resetPreviewScores() {
+    Object.values(CARD_INPUT_PREVIEW_IDS).forEach((group) => {
+      Object.values(group).forEach((id) => {
+        document.getElementById(id).innerText = '-';
+      });
+    });
+  }
+
+  function resetRecordUi(contextKey) {
+    const context = CARD_INPUT_RECORD_CONTEXTS[contextKey];
+    document.getElementById(context.btnId).classList.remove('recording');
+    document.getElementById(context.btnId).classList.add('idle');
+    document.getElementById(context.iconId).textContent = '🎤';
+    document.getElementById(context.hintId).innerText = '点击开始录音';
+    document.getElementById(context.waveId).classList.add('hidden');
+    document.getElementById(context.timerId).innerText = '';
+  }
+
+  async function apiRequest(path, options = {}) {
+    if (window.location.protocol === 'file:') {
+      throw new Error('请通过本地服务器或 Nginx 打开页面，不要直接双击 HTML 文件');
+    }
+
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const devPorts = new Set(['3000', '5173', '5500', '5501', '8080']);
+    const apiUrl = devPorts.has(window.location.port)
+      ? `${window.location.protocol}//${window.location.hostname}:8000/api${normalizedPath}`
+      : `${window.location.origin}/api${normalizedPath}`;
+
+    const requestOptions = {
+      method: options.method || 'GET',
+      headers: {}
+    };
+
+    if (options.json) {
+      requestOptions.headers['Content-Type'] = 'application/json';
+      requestOptions.body = JSON.stringify(options.json);
+    } else if (options.body) {
+      requestOptions.body = options.body;
+    }
+
+    let response;
+    try {
+      response = await fetch(apiUrl, requestOptions);
+    } catch (error) {
+      throw new Error('无法连接后端，请确认服务已启动，并通过 HTTP 页面访问当前文件');
+    }
+
+    if (!response.ok) {
+      let message = `请求失败 (${response.status})`;
+      try {
+        const errorData = await response.json();
+        if (typeof errorData.detail === 'string') {
+          message = errorData.detail;
+        }
+      } catch (error) {
+        message = `${message} ${response.statusText}`.trim();
+      }
+      throw new Error(message);
+    }
+
+    return response.json();
+  }
+
+  async function transcribeRecording(audioBlob, textAreaId) {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, `card-input-${Date.now()}.webm`);
+
+    window.showLoading('语音转写中...');
+    try {
+      const result = await apiRequest(CARD_INPUT_API_PATHS.transcribe, {
+        method: 'POST',
+        body: formData
+      });
+      const textArea = document.getElementById(textAreaId);
+      const existingText = textArea.value.trim();
+      textArea.value = existingText ? `${existingText}\n${result.text}` : result.text;
+      window.showToast('语音已转写到文本框');
+    } catch (error) {
+      window.showToast(error.message || '语音转写失败');
+    } finally {
+      window.hideLoading();
+    }
+  }
+
+  async function startRecord(contextKey) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      window.showToast('当前浏览器不支持录音');
+      return;
+    }
+
+    const context = CARD_INPUT_RECORD_CONTEXTS[contextKey];
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+      let seconds = 0;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        if (cardInputActiveRecorder && cardInputActiveRecorder.timer) {
+          clearInterval(cardInputActiveRecorder.timer);
+        }
+        resetRecordUi(contextKey);
+        stream.getTracks().forEach((track) => track.stop());
+        cardInputActiveRecorder = null;
+
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        if (audioBlob.size < 100) {
+          window.showToast('录音太短，请重试');
+          return;
+        }
+        await transcribeRecording(audioBlob, context.textAreaId);
+      };
+
+      recorder.start();
+      cardInputActiveRecorder = {
+        contextKey,
+        recorder,
+        timer: setInterval(() => {
+          seconds += 1;
+          const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+          const secs = (seconds % 60).toString().padStart(2, '0');
+          document.getElementById(context.timerId).innerText = `${mins}:${secs}`;
+        }, 1000)
+      };
+
+      document.getElementById(context.btnId).classList.remove('idle');
+      document.getElementById(context.btnId).classList.add('recording');
+      document.getElementById(context.iconId).textContent = '■';
+      document.getElementById(context.hintId).innerText = '录音中，点击结束';
+      document.getElementById(context.waveId).classList.remove('hidden');
+      document.getElementById(context.timerId).innerText = '00:00';
+    } catch (error) {
+      window.showToast('无法访问麦克风，请检查权限');
+    }
+  }
+
+  window.switchTab = function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    document.getElementById('a-card-view').classList.toggle('hidden', tab !== 'a-card');
+    document.getElementById('b-card-view').classList.toggle('hidden', tab !== 'b-card');
+    document.getElementById('result-view').classList.add('hidden');
+  };
+
+  window.toggleRecord = function toggleRecord() {
+    if (cardInputActiveRecorder && cardInputActiveRecorder.contextKey === 'a') {
+      cardInputActiveRecorder.recorder.stop();
+      return;
+    }
+    if (cardInputActiveRecorder) {
+      window.showToast('请先结束当前录音');
+      return;
+    }
+    startRecord('a');
+  };
+
+  window.toggleRecordB = function toggleRecordB() {
+    if (cardInputActiveRecorder && cardInputActiveRecorder.contextKey === 'b') {
+      cardInputActiveRecorder.recorder.stop();
+      return;
+    }
+    if (cardInputActiveRecorder) {
+      window.showToast('请先结束当前录音');
+      return;
+    }
+    startRecord('b');
+  };
+
+  window.evaluateA = async function evaluateA() {
+    const company = document.getElementById('a-company').value.trim();
+    const industry = document.getElementById('a-industry').value;
+    const text = document.getElementById('a-text').value.trim();
+
+    if (!company && !text) {
+      window.showToast('请输入客户名称或描述');
+      return;
+    }
+
+    window.showLoading('AI 评估中...');
+    try {
+      const result = await apiRequest(CARD_INPUT_API_PATHS.evaluate, {
+        method: 'POST',
+        json: {
+          card_type: 'A',
+          company,
+          industry,
+          text
+        }
+      });
+
+      updatePreviewScores(result);
+      document.getElementById('result-dimensions').innerHTML = result.dimensions.map((dimension) => {
+        const pct = dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0;
+        return `<div class="dimension-item">
+          <span class="dimension-name">${dimension.name}</span>
+          <div class="dimension-score">
+            <div class="dimension-bar"><div class="dimension-fill" style="width:${pct}%"></div></div>
+            <span class="dimension-val">${dimension.score}</span>/${dimension.max_score}
+          </div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('totalScore').innerText = result.normalized_score;
+      const gradeEl = document.getElementById('scoreGrade');
+      gradeEl.innerText = result.grade;
+      gradeEl.className = `score-grade ${result.grade}`;
+      document.getElementById('ratingDesc').innerText = `${result.grade_label}。${result.rating_desc}`;
+      document.getElementById('suggestionText').innerText = result.suggestion;
+      document.getElementById('a-card-view').classList.add('hidden');
+      document.getElementById('b-card-view').classList.add('hidden');
+      document.getElementById('result-view').classList.remove('hidden');
+    } catch (error) {
+      window.showToast(error.message || '客户意向评估失败');
+    } finally {
+      window.hideLoading();
+    }
+  };
+
+  window.evaluateB = async function evaluateB() {
+    const company = document.getElementById('b-company').value.trim();
+    const opportunityName = document.getElementById('b-opportunity').value.trim();
+    const amountValue = document.getElementById('b-amount').value.trim();
+    const text = document.getElementById('b-text').value.trim();
+
+    if (!company && !opportunityName && !text) {
+      window.showToast('请输入客户名称、商机名称或描述');
+      return;
+    }
+
+    window.showLoading('AI 评估中...');
+    try {
+      const result = await apiRequest(CARD_INPUT_API_PATHS.evaluate, {
+        method: 'POST',
+        json: {
+          card_type: 'B',
+          company,
+          opportunity_name: opportunityName,
+          amount: amountValue ? Number(amountValue) : null,
+          text
+        }
+      });
+
+      updatePreviewScores(result);
+      document.getElementById('result-dimensions').innerHTML = result.dimensions.map((dimension) => {
+        const pct = dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0;
+        return `<div class="dimension-item">
+          <span class="dimension-name">${dimension.name}</span>
+          <div class="dimension-score">
+            <div class="dimension-bar"><div class="dimension-fill" style="width:${pct}%"></div></div>
+            <span class="dimension-val">${dimension.score}</span>/${dimension.max_score}
+          </div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('totalScore').innerText = result.normalized_score;
+      const gradeEl = document.getElementById('scoreGrade');
+      gradeEl.innerText = result.grade;
+      gradeEl.className = `score-grade ${result.grade}`;
+      document.getElementById('ratingDesc').innerText = `${result.grade_label}。${result.rating_desc}`;
+      document.getElementById('suggestionText').innerText = result.suggestion;
+      document.getElementById('a-card-view').classList.add('hidden');
+      document.getElementById('b-card-view').classList.add('hidden');
+      document.getElementById('result-view').classList.remove('hidden');
+    } catch (error) {
+      window.showToast(error.message || '商机价值评估失败');
+    } finally {
+      window.hideLoading();
+    }
+  };
+
+  window.resetForm = function resetForm() {
+    document.getElementById('a-company').value = '';
+    document.getElementById('a-industry').value = '';
+    document.getElementById('a-text').value = '';
+    document.getElementById('b-company').value = '';
+    document.getElementById('b-opportunity').value = '';
+    document.getElementById('b-amount').value = '';
+    document.getElementById('b-text').value = '';
+    resetPreviewScores();
+    document.getElementById('result-view').classList.add('hidden');
+    window.switchTab('a-card');
+  };
+
+  window.showLoading = function showLoading(message) {
+    const loading = document.getElementById('loading');
+    const textEl = loading.querySelector('.loading-text');
+    textEl.innerText = message || cardInputDefaultLoadingText;
+    loading.classList.remove('hidden');
+  };
+
+  window.hideLoading = function hideLoading() {
+    const loading = document.getElementById('loading');
+    loading.querySelector('.loading-text').innerText = cardInputDefaultLoadingText;
+    loading.classList.add('hidden');
+  };
+
+  window.showToast = function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.innerText = message;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 2500);
+  };
+
+  // 检查用户权限
+  function checkPermission() {
+    var user = localStorage.getItem('crm_user');
+    if (!user) {
+      window.location.href = 'login.html';
+      return null;
+    }
+    return JSON.parse(user);
+  }
+
+  // 页面加载时检查权限
+  document.addEventListener('DOMContentLoaded', function() {
+    checkPermission();
+  }
+})();
+</script>
+</body>
+</html>

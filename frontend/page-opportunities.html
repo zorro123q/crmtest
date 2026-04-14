@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商机列表 - SalesPilot CRM</title>
+<style>
+:root{
+  --primary:#0EA5E9;
+  --primary-dark:#0284C7;
+  --primary-light:#E0F2FE;
+  --success:#10B981;
+  --warning:#F59E0B;
+  --danger:#EF4444;
+  --bg:#F1F5F9;
+  --surface:#FFFFFF;
+  --border:#E2E8F0;
+  --text:#1E293B;
+  --text2:#64748B;
+  --text3:#94A3B8;
+  --shadow:0 1px 3px rgba(15,23,42,.08),0 10px 22px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+.sidebar{width:236px;background:linear-gradient(180deg,#0F172A 0%,#1E3A5F 55%,#0F172A 100%);color:#CBD5E1;padding:22px 0}
+.logo{padding:0 20px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-title{font-size:22px;font-weight:800;color:#fff}
+.logo-sub{font-size:12px;color:#94A3B8;margin-top:6px}
+.nav{padding:16px 12px 0}
+.nav a{display:flex;align-items:center;gap:10px;color:#94A3B8;text-decoration:none;padding:11px 12px;border-radius:12px;font-size:14px;margin-bottom:6px}
+.nav a:hover,.nav a.active{background:rgba(14,165,233,.14);color:#fff}
+.main{flex:1;display:flex;flex-direction:column}
+.topbar{background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);padding:18px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;position:sticky;top:0;z-index:10}
+.topbar h1{font-size:24px;font-weight:800}
+.topbar p{font-size:13px;color:var(--text2);margin-top:6px}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.search{padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;width:240px;font-size:14px}
+.search:focus{outline:none;border-color:#7DD3FC;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+.btn{border:none;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-primary{background:linear-gradient(135deg,var(--primary),#2563EB);color:#fff}
+.btn-ghost{background:#fff;border:1px solid var(--border);color:var(--text)}
+.btn-danger{background:#FEF2F2;color:#B91C1C}
+.avatar{width:40px;height:40px;border-radius:14px;background:linear-gradient(135deg,var(--primary),#2563EB);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+.content{padding:24px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+.stat-label{font-size:12px;color:var(--text3)}
+.stat-value{font-size:28px;font-weight:800;margin-top:8px}
+.stat-hint{font-size:12px;color:var(--text2);margin-top:8px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:16px}
+.panel-head h2{font-size:18px;font-weight:800}
+.panel-head span{font-size:13px;color:var(--text2)}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:1120px}
+th,td{padding:14px 16px;border-bottom:1px solid var(--border);text-align:left;font-size:13px;vertical-align:middle}
+th{background:#F8FAFC;color:var(--text2);font-size:12px;font-weight:800}
+tbody tr:hover{background:#FAFCFF}
+.pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.pill-blue{background:#EFF6FF;color:#1D4ED8}
+.pill-green{background:#ECFDF5;color:#047857}
+.pill-orange{background:#FFF7ED;color:#C2410C}
+.pill-red{background:#FEF2F2;color:#B91C1C}
+.action-btn{border:none;border-radius:10px;padding:8px 12px;cursor:pointer;font-size:12px;font-weight:700}
+.action-edit{background:#E0F2FE;color:#0369A1}
+.action-view{background:#F1F5F9;color:#475569}
+.empty{padding:36px 20px;text-align:center;color:var(--text2)}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
+.modal-overlay.active{display:flex}
+.modal{width:min(820px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.25)}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:20px;font-weight:800}
+.modal-close{border:none;background:#F1F5F9;border-radius:10px;width:36px;height:36px;cursor:pointer;font-size:20px}
+.modal-body{padding:22px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px}
+.input,.select,.textarea{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:12px;font-size:14px;background:#fff}
+.textarea{min-height:96px;resize:vertical}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:#7DD3FC;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
+.readonly{background:#F8FAFC;color:#64748B}
+.modal-foot{padding:18px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+@media (max-width:1080px){.stats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:860px){
+  body{display:block}
+  .sidebar{width:100%;padding:14px}
+  .nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:16px 0 0}
+  .nav a{margin:0}
+  .topbar{position:static;flex-direction:column;align-items:flex-start}
+  .toolbar{justify-content:flex-start}
+  .search{width:100%}
+  .stats{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">SalesPilot</div>
+      <div class="logo-sub">共享可见 / 按归属编辑</div>
+    </div>
+    <nav class="nav">
+      <a href="crm-system.html">🏠 工作台</a>
+      <a href="page-dashboard.html">📊 销售仪表盘</a>
+      <a href="page-funnel.html">🔻 商机漏斗</a>
+      <a href="page-kanban.html">🗂️ 商机看板</a>
+      <a href="page-leads.html">👥 线索管理</a>
+      <a href="page-opportunities.html" class="active">💼 商机列表</a>
+      <a href="page-report.html">📋 商机通报</a>
+      <a href="ai-input.html">🤖 AI 智能录入</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>商机列表</h1>
+        <p>所有登录用户都可以查看全部商机。普通用户只能编辑自己创建的商机，管理员可以修改全部商机并导出数据。</p>
+      </div>
+      <div class="toolbar">
+        <input class="search" id="search-input" type="text" placeholder="搜索客户、商机、填报人">
+        <button class="btn btn-ghost" id="export-btn" onclick="exportOpps()">导出数据</button>
+        <button class="btn btn-ghost" id="template-btn" onclick="exportOppTemplate()">导出模板</button>
+        <button class="btn btn-primary" onclick="openCreateModal()">新建商机</button>
+        <div class="avatar" id="user-avatar">U</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="stats">
+        <div class="stat-card">
+          <div class="stat-label">商机总数</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-hint">当前系统全部共享商机</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">我的商机</div>
+          <div class="stat-value" id="stat-mine">0</div>
+          <div class="stat-hint">当前账号本人填报</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">赢单数量</div>
+          <div class="stat-value" id="stat-won">0</div>
+          <div class="stat-hint">阶段为赢单的记录</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">总预算</div>
+          <div class="stat-value" id="stat-amount">¥0</div>
+          <div class="stat-hint">按当前筛选结果统计</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>共享商机数据</h2>
+            <span>可查看全部信息；按钮会根据归属自动变成“编辑”或“只读查看”</span>
+          </div>
+          <span id="result-count">0 条记录</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>客户名称</th>
+                <th>商机名称</th>
+                <th>客户类型</th>
+                <th>涉及产品</th>
+                <th>预算</th>
+                <th>阶段</th>
+                <th>等级</th>
+                <th>B卡</th>
+                <th>填报人</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="opp-tbody"></tbody>
+          </table>
+          <div class="empty" id="empty-state" style="display:none">暂无商机数据</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="opp-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">新建商机</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="opp-company">客户名称</label>
+            <input class="input" id="opp-company" type="text" placeholder="请输入客户名称">
+          </div>
+          <div class="form-group">
+            <label for="opp-name">商机名称</label>
+            <input class="input" id="opp-name" type="text" placeholder="请输入商机名称">
+          </div>
+          <div class="form-group">
+            <label for="opp-type">客户类型</label>
+            <select class="select" id="opp-type">
+              <option value="">请选择</option>
+              <option value="老客户">老客户</option>
+              <option value="老客户新部门">老客户新部门</option>
+              <option value="新客户">新客户</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opp-product">涉及产品</label>
+            <input class="input" id="opp-product" type="text" placeholder="如：智能客服、外呼机器人">
+          </div>
+          <div class="form-group">
+            <label for="opp-budget">预算</label>
+            <input class="input" id="opp-budget" type="number" min="0" placeholder="请输入预算金额">
+          </div>
+          <div class="form-group">
+            <label for="opp-stage">商机阶段</label>
+            <select class="select" id="opp-stage">
+              <option value="初步接洽">初步接洽</option>
+              <option value="方案报价">方案报价</option>
+              <option value="合同谈判">合同谈判</option>
+              <option value="赢单">赢单</option>
+              <option value="输单">输单</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opp-level">商机等级</label>
+            <select class="select" id="opp-level">
+              <option value="">请选择</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opp-bcard">B卡评级</label>
+            <select class="select" id="opp-bcard">
+              <option value="">请选择</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opp-approve">关键人认可</label>
+            <select class="select" id="opp-approve">
+              <option value="">请选择</option>
+              <option value="是">是</option>
+              <option value="否">否</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opp-signed">是否签约</label>
+            <select class="select" id="opp-signed">
+              <option value="">请选择</option>
+              <option value="是">是</option>
+              <option value="否">否</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="opp-demand">需求描述</label>
+          <textarea class="textarea" id="opp-demand" placeholder="请输入需求描述"></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" id="save-btn" onclick="saveOpp()">保存商机</button>
+      </div>
+    </div>
+  </div>
+
+<script src="crm-common.js"></script>
+<script>
+var currentUser = CRMApp.requireAuth('opportunities');
+var opps = [];
+var filteredOpps = [];
+var editingOppId = null;
+var currentMode = 'create';
+
+function normalizeOpp(item) {
+  var custom = item.custom_fields || {};
+  return {
+    id: item.id,
+    ownerId: item.owner_id || (item.owner && item.owner.id) || '',
+    ownerName: item.owner && item.owner.username ? item.owner.username : '未分配',
+    company: custom.company || custom.customer_name || '',
+    name: item.name || '',
+    type: custom.customer_type || '',
+    product: custom.product || '',
+    budget: Number(item.amount || 0),
+    stage: item.stage || '初步接洽',
+    level: custom.level || '',
+    bcard: custom.bcard || '',
+    demand: custom.demand || '',
+    approve: custom.approve || '',
+    signed: custom.signed || (item.stage === '赢单' ? '是' : '否'),
+    raw: item
+  };
+}
+
+function getStageClass(stage) {
+  if (stage === '赢单') return 'pill pill-green';
+  if (stage === '输单') return 'pill pill-red';
+  if (stage === '合同谈判') return 'pill pill-orange';
+  return 'pill pill-blue';
+}
+
+function getLevelClass(level) {
+  if (level === 'A') return 'pill pill-green';
+  if (level === 'B') return 'pill pill-blue';
+  return 'pill pill-orange';
+}
+
+async function loadOpps() {
+  try {
+    var response = await CRMApp.apiRequest('/api/opportunities?page=1&page_size=100');
+    opps = ((response && response.data) || []).map(normalizeOpp);
+    applyFilter();
+  } catch (error) {
+    alert(error.message || '获取商机失败');
+  }
+}
+
+function applyFilter() {
+  var keyword = document.getElementById('search-input').value.trim().toLowerCase();
+  filteredOpps = opps.filter(function(item) {
+    if (!keyword) return true;
+    return [
+      item.company,
+      item.name,
+      item.type,
+      item.product,
+      item.ownerName
+    ].join(' ').toLowerCase().indexOf(keyword) >= 0;
+  });
+  renderStats();
+  renderTable();
+}
+
+function renderStats() {
+  var total = filteredOpps.length;
+  var mine = filteredOpps.filter(function(item) { return String(item.ownerId) === String(currentUser.id); }).length;
+  var won = filteredOpps.filter(function(item) { return item.stage === '赢单'; }).length;
+  var amount = filteredOpps.reduce(function(sum, item) { return sum + (Number(item.budget) || 0); }, 0);
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-mine').textContent = mine;
+  document.getElementById('stat-won').textContent = won;
+  document.getElementById('stat-amount').textContent = '¥' + amount.toLocaleString('zh-CN');
+  document.getElementById('result-count').textContent = total + ' 条记录';
+}
+
+function renderTable() {
+  var tbody = document.getElementById('opp-tbody');
+  var empty = document.getElementById('empty-state');
+
+  if (!filteredOpps.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  tbody.innerHTML = filteredOpps.map(function(item) {
+    var editable = CRMApp.canEditOwner(currentUser, item.ownerId);
+    return '<tr>' +
+      '<td><strong>' + CRMApp.escapeHtml(item.company || '-') + '</strong></td>' +
+      '<td>' + CRMApp.escapeHtml(item.name || '-') + '</td>' +
+      '<td>' + CRMApp.escapeHtml(item.type || '-') + '</td>' +
+      '<td>' + CRMApp.escapeHtml(item.product || '-') + '</td>' +
+      '<td>¥' + (Number(item.budget) || 0).toLocaleString('zh-CN') + '</td>' +
+      '<td><span class="' + getStageClass(item.stage) + '">' + CRMApp.escapeHtml(item.stage) + '</span></td>' +
+      '<td><span class="' + getLevelClass(item.level) + '">' + CRMApp.escapeHtml(item.level || '-') + '</span></td>' +
+      '<td>' + CRMApp.escapeHtml(item.bcard || '-') + '</td>' +
+      '<td>' + CRMApp.escapeHtml(item.ownerName) + '</td>' +
+      '<td><button class="action-btn ' + (editable ? 'action-edit' : 'action-view') + '" onclick="openDetailModal(\'' + item.id + '\')">' + (editable ? '编辑' : '只读查看') + '</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function setUserUI() {
+  document.getElementById('user-avatar').textContent = (currentUser.username || 'U').charAt(0).toUpperCase();
+  var showExport = CRMApp.isAdmin(currentUser);
+  document.getElementById('export-btn').style.display = showExport ? 'inline-flex' : 'none';
+  document.getElementById('template-btn').style.display = showExport ? 'inline-flex' : 'none';
+}
+
+function openCreateModal() {
+  currentMode = 'create';
+  editingOppId = null;
+  document.getElementById('modal-title').textContent = '新建商机';
+  document.getElementById('save-btn').textContent = '保存商机';
+  fillForm(null, false);
+  document.getElementById('opp-modal').classList.add('active');
+}
+
+function openDetailModal(id) {
+  var item = opps.find(function(entry) { return entry.id === id; });
+  if (!item) return;
+  currentMode = 'edit';
+  editingOppId = id;
+  var editable = CRMApp.canEditOwner(currentUser, item.ownerId);
+  document.getElementById('modal-title').textContent = editable ? '编辑商机' : '查看商机';
+  document.getElementById('save-btn').textContent = editable ? '保存修改' : '关闭';
+  fillForm(item, !editable);
+  document.getElementById('opp-modal').classList.add('active');
+}
+
+function fillForm(item, readOnly) {
+  var values = item || {
+    company: '',
+    name: '',
+    type: '',
+    product: '',
+    budget: '',
+    stage: '初步接洽',
+    level: '',
+    bcard: '',
+    demand: '',
+    approve: '',
+    signed: ''
+  };
+
+  document.getElementById('opp-company').value = values.company || '';
+  document.getElementById('opp-name').value = values.name || '';
+  document.getElementById('opp-type').value = values.type || '';
+  document.getElementById('opp-product').value = values.product || '';
+  document.getElementById('opp-budget').value = values.budget || '';
+  document.getElementById('opp-stage').value = values.stage || '初步接洽';
+  document.getElementById('opp-level').value = values.level || '';
+  document.getElementById('opp-bcard').value = values.bcard || '';
+  document.getElementById('opp-demand').value = values.demand || '';
+  document.getElementById('opp-approve').value = values.approve || '';
+  document.getElementById('opp-signed').value = values.signed || '';
+
+  [
+    'opp-company',
+    'opp-name',
+    'opp-type',
+    'opp-product',
+    'opp-budget',
+    'opp-stage',
+    'opp-level',
+    'opp-bcard',
+    'opp-demand',
+    'opp-approve',
+    'opp-signed'
+  ].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.disabled = !!readOnly;
+    el.classList.toggle('readonly', !!readOnly);
+  });
+}
+
+function closeModal() {
+  document.getElementById('opp-modal').classList.remove('active');
+}
+
+function collectPayload() {
+  var company = document.getElementById('opp-company').value.trim();
+  var name = document.getElementById('opp-name').value.trim();
+  if (!company || !name) {
+    throw new Error('请先填写客户名称和商机名称');
+  }
+
+  var signed = document.getElementById('opp-signed').value || '否';
+  var stage = document.getElementById('opp-stage').value || '初步接洽';
+  if (signed === '是') {
+    stage = '赢单';
+  }
+
+  return {
+    name: name,
+    amount: Number(document.getElementById('opp-budget').value || 0),
+    stage: stage,
+    source: 'manual',
+    custom_fields: {
+      company: company,
+      customer_type: document.getElementById('opp-type').value,
+      product: document.getElementById('opp-product').value.trim(),
+      level: document.getElementById('opp-level').value,
+      bcard: document.getElementById('opp-bcard').value,
+      demand: document.getElementById('opp-demand').value.trim(),
+      approve: document.getElementById('opp-approve').value,
+      signed: signed
+    }
+  };
+}
+
+async function saveOpp() {
+  if (currentMode === 'edit') {
+    var existing = opps.find(function(entry) { return entry.id === editingOppId; });
+    if (!existing || !CRMApp.canEditOwner(currentUser, existing.ownerId)) {
+      closeModal();
+      return;
+    }
+  }
+
+  try {
+    var payload = collectPayload();
+    if (currentMode === 'create') {
+      await CRMApp.apiRequest('/api/opportunities', { method: 'POST', body: payload });
+    } else {
+      await CRMApp.apiRequest('/api/opportunities/' + editingOppId, { method: 'PATCH', body: payload });
+    }
+    closeModal();
+    await loadOpps();
+  } catch (error) {
+    alert(error.message || '保存失败');
+  }
+}
+
+function exportOpps() {
+  if (!CRMApp.isAdmin(currentUser)) {
+    alert('普通用户不能导出数据');
+    return;
+  }
+
+  var rows = [
+    ['客户名称','商机名称','客户类型','涉及产品','预算','阶段','等级','B卡','关键人认可','是否签约','填报人']
+  ];
+
+  opps.forEach(function(item) {
+    rows.push([
+      item.company,
+      item.name,
+      item.type,
+      item.product,
+      item.budget,
+      item.stage,
+      item.level,
+      item.bcard,
+      item.approve,
+      item.signed,
+      item.ownerName
+    ]);
+  });
+
+  downloadCsv(rows, '商机数据_' + new Date().toISOString().slice(0, 10) + '.csv');
+}
+
+function exportOppTemplate() {
+  if (!CRMApp.isAdmin(currentUser)) {
+    alert('普通用户不能导出数据');
+    return;
+  }
+
+  var rows = [
+    ['客户名称','商机名称','客户类型','涉及产品','预算','阶段','等级','B卡','关键人认可','是否签约'],
+    ['示例客户','AI 外呼项目','新客户','智能外呼',80,'初步接洽','A','A','是','否']
+  ];
+  downloadCsv(rows, '商机导入模板.csv');
+}
+
+function downloadCsv(rows, filename) {
+  var content = '\uFEFF' + rows.map(function(row) {
+    return row.map(function(cell) {
+      var value = cell == null ? '' : String(cell);
+      return '"' + value.replace(/"/g, '""') + '"';
+    }).join(',');
+  }).join('\n');
+
+  var blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+document.getElementById('search-input').addEventListener('input', applyFilter);
+document.getElementById('opp-modal').addEventListener('click', function(event) {
+  if (event.target === this) closeModal();
+});
+
+if (currentUser) {
+  setUserUI();
+  loadOpps();
+}
+</script>
+</body>
+</html>

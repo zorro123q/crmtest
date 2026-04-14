@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SalesPilot CRM — 系统入口</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0A1628 0%,#1E3A5F 50%,#0A1628 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+.container{width:100%;max-width:900px}
+.logo-area{text-align:center;margin-bottom:48px}
+.logo-icon{font-size:56px;margin-bottom:12px}
+.logo-title{font-size:36px;font-weight:900;color:#fff;letter-spacing:-1px}
+.logo-sub{font-size:15px;color:#64748B;margin-top:6px}
+.logo-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,102,255,.2);border:1px solid rgba(0,102,255,.4);color:#79B8FF;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;margin-top:10px}
+
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+@media(max-width:600px){.cards{grid-template-columns:1fr}}
+
+.card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:28px;cursor:pointer;transition:all .2s;text-decoration:none;display:block;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05),transparent);opacity:0;transition:opacity .2s}
+.card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.25);box-shadow:0 20px 40px rgba(0,0,0,.3)}
+.card:hover::before{opacity:1}
+.card.primary{background:linear-gradient(135deg,rgba(0,102,255,.25),rgba(108,61,224,.25));border-color:rgba(0,102,255,.4)}
+.card.mobile{background:linear-gradient(135deg,rgba(0,196,140,.15),rgba(0,102,255,.15));border-color:rgba(0,196,140,.4)}
+
+.card-icon{font-size:36px;margin-bottom:14px}
+.card-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:6px}
+.card-desc{font-size:13px;color:#94A3B8;line-height:1.6;margin-bottom:16px}
+.card-features{display:flex;flex-wrap:wrap;gap:6px}
+.feat-tag{background:rgba(255,255,255,.1);color:#CBD5E1;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+.card-arrow{position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:24px;color:rgba(255,255,255,.3);transition:all .2s}
+.card:hover .card-arrow{right:18px;color:rgba(255,255,255,.7)}
+.card-badge{position:absolute;top:16px;right:16px;background:#10B981;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px}
+
+.info-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:600px){.info-row{grid-template-columns:1fr 1fr}}
+.info-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:16px;text-align:center}
+.info-val{font-size:24px;font-weight:900;color:#fff}
+.info-label{font-size:11px;color:#64748B;margin-top:4px}
+
+.footer{text-align:center;color:#475569;font-size:12px;line-height:1.8}
+.footer a{color:#64748B;text-decoration:none}
+.footer a:hover{color:#94A3B8}
+
+.deploy-tip{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:flex-start;gap:12px}
+.deploy-tip-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.deploy-tip-title{font-size:13px;font-weight:700;color:#FFB020;margin-bottom:3px}
+.deploy-tip-text{font-size:12px;color:#94A3B8;line-height:1.6}
+.deploy-tip code{background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px;font-family:monospace;color:#A8E6CF;font-size:11px}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-area">
+    <div class="logo-icon">🚀</div>
+    <div class="logo-title">SalesPilot CRM</div>
+    <div class="logo-sub">AI 驱动的销售管理系统 · Metadata-Driven 架构</div>
+    <div class="logo-badge"><span>●</span> 演示版 · 本地运行</div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-card">
+      <div class="info-val" style="color:#3B82F6">¥2,847万</div>
+      <div class="info-label">本季度管道总额</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" style="color:#10B981">47</div>
+      <div class="info-label">活跃商机数</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" style="color:#8B5CF6">34.2%</div>
+      <div class="info-label">平均赢单率</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <a class="card primary" href="page-dashboard.html">
+      <div class="card-badge">桌面端</div>
+      <div class="card-icon">🖥️</div>
+      <div class="card-title">CRM 管理系统</div>
+      <div class="card-desc">完整的销售管理工作台，包含仪表盘、看板、漏斗分析、线索管理、AI 录入和元数据配置。（点击进入仪表盘）</div>
+      <div class="card-features">
+        <span class="feat-tag">📊 销售仪表盘</span>
+        <span class="feat-tag">🗂️ 商机看板</span>
+        <span class="feat-tag">🔻 漏斗分析</span>
+        <span class="feat-tag">👥 线索管理</span>
+        <span class="feat-tag">🤖 AI 录入</span>
+        <span class="feat-tag">⚙️ 元数据配置</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a class="card mobile" href="ai-input.html">
+      <div class="card-badge" style="background:#0066FF">手机端</div>
+      <div class="card-icon">📱</div>
+      <div class="card-title">AI 智能录入</div>
+      <div class="card-desc">手机端专属页面，支持语音录音、文字粘贴，AI 自动解析为结构化商机数据，随时随地录入。</div>
+      <div class="card-features">
+        <span class="feat-tag">🎤 语音录音</span>
+        <span class="feat-tag">⚡ AI 解析</span>
+        <span class="feat-tag">📦 JSON 输出</span>
+        <span class="feat-tag">💾 保存商机</span>
+        <span class="feat-tag">📋 历史记录</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <a class="card" href="card-input.html" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(14,165,233,.2));border-color:rgba(139,92,246,.4)">
+      <div class="card-badge" style="background:#8B5CF6">新功能</div>
+      <div class="card-icon">🎯</div>
+      <div class="card-title">商机价值评估</div>
+      <div class="card-desc">AI 驱动的 A卡（客户意向）和 B卡（商机评估）评分，通过语音输入自动评估商机价值。</div>
+      <div class="card-features">
+        <span class="feat-tag">🏆 A卡评分</span>
+        <span class="feat-tag">💼 B卡评分</span>
+        <span class="feat-tag">🎤 语音输入</span>
+        <span class="feat-tag">⭐ 价值评级</span>
+        <span class="feat-tag">📋 跟进建议</span>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+  </div>
+
+  <div class="deploy-tip">
+    <div class="deploy-tip-icon">💡</div>
+    <div>
+      <div class="deploy-tip-title">FTP 部署说明</div>
+      <div class="deploy-tip-text">
+        将以下文件上传到网站根目录即可：<code>index.html</code> · <code>crm-system.html</code> · <code>ai-input.html</code><br>
+        无需服务器、无需数据库、无需安装任何依赖。所有文件均为纯静态 HTML，支持任意空间/CDN 部署。<br>
+        手机端可直接通过域名访问 <code>ai-input.html</code>，或在 CRM 系统内扫码跳转。
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>SalesPilot CRM · 纯静态版 · 可直接 FTP 上传</div>
+    <div style="margin-top:4px">兼容 Windows / macOS / Linux · 支持 IE11+ / Chrome / Safari / 微信内置浏览器</div>
+    <div style="margin-top:8px;color:#334155">
+      后端接入：<a href="#">FastAPI 文档</a> &nbsp;·&nbsp; 
+      AI 配置：<a href="#">GPT-4o / paraformer-v2</a> &nbsp;·&nbsp; 
+      部署指南：<a href="../DEPLOY.md">DEPLOY.md</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
