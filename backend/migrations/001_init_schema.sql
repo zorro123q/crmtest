@@ -1,20 +1,15 @@
 -- SalesPilot CRM - MySQL 8 schema
--- Metadata-driven CRM base tables
+-- Simplified username/password auth
 
 SET NAMES utf8mb4;
 
 CREATE TABLE users (
     id              CHAR(36) PRIMARY KEY DEFAULT (UUID()),
-    email           VARCHAR(255) NOT NULL UNIQUE,
     username        VARCHAR(100) NOT NULL,
-    hashed_pwd      VARCHAR(255) NOT NULL,
-    role            ENUM('admin', 'manager', 'sales') NOT NULL DEFAULT 'sales',
-    avatar_url      VARCHAR(500) NULL,
-    is_active       BOOLEAN DEFAULT TRUE,
+    password        VARCHAR(255) NOT NULL,
     created_at      DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at      DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-    INDEX idx_users_email (email),
-    INDEX idx_users_role (role)
+    UNIQUE KEY uk_users_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE accounts (
@@ -137,6 +132,10 @@ CREATE TABLE metadata_fields (
     UNIQUE KEY uq_metadata_fields_object_field (object_name, field_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO users (id, username, password)
+SELECT '10000000-0000-4000-8000-000000000001', 'admin', '123456'
+WHERE NOT EXISTS (SELECT 1 FROM users LIMIT 1);
+
 INSERT INTO metadata_fields (object_name, field_name, display_name, field_type, is_required, is_visible, sort_order) VALUES
 ('Opportunity', 'customer_name', '客户名称', 'String', TRUE, TRUE, 1),
 ('Opportunity', 'deal_value', '预计金额', 'Currency', TRUE, TRUE, 2),
@@ -150,7 +149,3 @@ INSERT INTO metadata_fields (object_name, field_name, display_name, field_type, 
 ('Lead', 'status', '状态', 'Enum', TRUE, TRUE, 3),
 ('Lead', 'score', '线索评分', 'Number', FALSE, TRUE, 4),
 ('Lead', 'source', '来源', 'Enum', FALSE, TRUE, 5);
-
--- 用户账号不再预置演示数据。
--- 首个管理员请在数据库初始化完成后，通过以下命令创建：
--- python create_admin.py --email admin@example.com --username 系统管理员 --password StrongPass123

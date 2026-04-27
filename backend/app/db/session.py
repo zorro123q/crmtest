@@ -23,6 +23,13 @@ class Base(DeclarativeBase):
 
 
 async def get_db():
+    """Dependency that provides a database session.
+    
+    Ensures proper transaction management:
+    - Commits on success
+    - Rolls back on exception
+    - Always closes the session
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session

@@ -3,150 +3,737 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>商机看板 — SalesPilot CRM</title>
+<title>商机看板 - SalesPilot CRM</title>
 <style>
-:root{--primary:#0EA5E9;--primary-light:#E0F2FE;--accent:#8B5CF6;--success:#10B981;--warning:#F59E0B;--danger:#EF4444;--bg:#F1F5F9;--surface:#FFFFFF;--border:#E2E8F0;--text:#1E293B;--text2:#64748B;--text3:#94A3B8;--shadow:0 1px 3px rgba(15,23,42,0.08),0 4px 12px rgba(15,23,42,0.04);--shadow-lg:0 10px 25px rgba(15,23,42,0.15)}
+:root{
+  --primary:#0ea5e9;
+  --primary-dark:#0284c7;
+  --success:#10b981;
+  --warning:#f59e0b;
+  --danger:#ef4444;
+  --bg:#f1f5f9;
+  --surface:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --text2:#64748b;
+  --text3:#94a3b8;
+  --shadow:0 1px 3px rgba(15,23,42,.08),0 10px 22px rgba(15,23,42,.06);
+  --shadow-lg:0 12px 30px rgba(15,23,42,.12);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
-.sidebar{width:240px;background:linear-gradient(180deg,#0F172A 0%,#1E3A5F 50%,#0F172A 100%);color:#CBD5E1;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;position:relative}
-.logo{padding:24px 20px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06)}
-.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#0EA5E9,#6366F1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.logo-text{font-size:18px;font-weight:700;background:linear-gradient(135deg,#fff,#0EA5E9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.logo-sub{font-size:10px;color:#64748B;margin-top:2px}
-.nav-section{padding:16px 0 8px}
-.nav-label{font-size:10px;font-weight:600;color:#475569;letter-spacing:1px;text-transform:uppercase;padding:0 20px 6px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;font-size:14px;border-left:3px solid transparent;transition:all .2s;color:#94A3B8;text-decoration:none}
-.nav-item:hover{background:rgba(14,165,233,.08);color:#E2E8F0}
-.nav-item.active{background:linear-gradient(90deg,rgba(14,165,233,.15) 0%,transparent 100%);color:#fff;font-weight:600;border-left-color:#0EA5E9}
-.nav-item .icon{font-size:18px;width:22px;text-align:center}
-.nav-badge{margin-left:auto;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-size:10px;border-radius:12px;padding:2px 8px;font-weight:700}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{background:linear-gradient(145deg,#FFFFFF,#F8FAFC);border-bottom:1px solid var(--border);padding:0 28px;height:64px;display:flex;align-items:center;gap:20px}
-.topbar-title{font-size:20px;font-weight:700;color:var(--text);flex:1}
-.topbar-sub{font-size:13px;color:var(--text3);font-weight:400;margin-left:10px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
-.btn-primary{background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff}
-.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
-.avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0EA5E9,#6366F1);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}
-.content{flex:1;overflow-y:auto;padding:24px}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.section-title{font-size:15px;font-weight:700}
-.kanban-board{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;min-height:500px}
-.kanban-col{flex-shrink:0;width:260px}
-.kanban-header{padding:14px 16px;border-radius:10px 10px 0 0;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff}
-.kanban-header .col-count{background:rgba(255,255,255,.25);border-radius:10px;padding:2px 8px;font-size:11px}
-.kanban-body{background:linear-gradient(180deg,#F8FAFC,#F1F5F9);border-radius:0 0 10px 10px;padding:12px;min-height:400px;display:flex;flex-direction:column;gap:10px}
-.kanban-card{background:var(--surface);border-radius:10px;padding:14px;box-shadow:var(--shadow);cursor:grab;border-left:3px solid transparent}
-.kanban-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
-.k-company{font-size:14px;font-weight:700;margin-bottom:6px}
-.k-amount{font-size:16px;font-weight:800;color:var(--primary)}
-.k-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
-.k-owner{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
-.k-avatar{width:22px;height:22px;border-radius:6px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
-.k-date{font-size:12px;color:var(--text3)}
-.tag{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
-.tag-blue{background:#EFF6FF;color:#1D4ED8}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  min-height:100vh;
+}
+.sidebar{
+  width:236px;
+  background:linear-gradient(180deg,#0f172a 0%,#1e3a5f 55%,#0f172a 100%);
+  color:#cbd5e1;
+  padding:22px 0;
+  flex-shrink:0;
+}
+.logo{
+  padding:0 20px 22px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.logo-title{
+  font-size:22px;
+  font-weight:800;
+  color:#fff;
+}
+.logo-sub{
+  font-size:12px;
+  color:#94a3b8;
+  margin-top:6px;
+}
+.nav{
+  padding:16px 12px 0;
+}
+.nav-section{
+  margin-bottom:10px;
+}
+.nav-label{
+  padding:0 12px 6px;
+  font-size:10px;
+  font-weight:700;
+  color:#64748b;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.nav a{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#94a3b8;
+  text-decoration:none;
+  padding:11px 12px;
+  border-radius:12px;
+  font-size:14px;
+  margin-bottom:6px;
+}
+.nav a:hover,.nav a.active{
+  background:rgba(14,165,233,.14);
+  color:#fff;
+}
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+.topbar{
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+  padding:18px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:20px;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+.topbar h1{
+  font-size:24px;
+  font-weight:800;
+}
+.topbar p{
+  font-size:13px;
+  color:var(--text2);
+  margin-top:6px;
+  line-height:1.6;
+}
+.toolbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.btn{
+  border:none;
+  border-radius:12px;
+  padding:10px 14px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--primary),#2563eb);
+  color:#fff;
+}
+.btn-ghost{
+  background:#fff;
+  border:1px solid var(--border);
+  color:var(--text);
+}
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--primary),#2563eb);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-weight:800;
+}
+.content{
+  padding:24px;
+}
+.notice{
+  margin-bottom:18px;
+  padding:16px 18px;
+  border-radius:16px;
+  background:#eff6ff;
+  border:1px solid #bfdbfe;
+  color:#1d4ed8;
+  line-height:1.7;
+  font-size:13px;
+  box-shadow:var(--shadow);
+}
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-bottom:18px;
+}
+.stat-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:var(--shadow);
+}
+.stat-label{
+  font-size:12px;
+  color:var(--text3);
+}
+.stat-value{
+  font-size:28px;
+  font-weight:800;
+  margin-top:8px;
+}
+.stat-hint{
+  font-size:12px;
+  color:var(--text2);
+  margin-top:8px;
+}
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.panel-head{
+  padding:18px 20px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+}
+.panel-head h2{
+  font-size:18px;
+  font-weight:800;
+}
+.panel-head span{
+  font-size:13px;
+  color:var(--text2);
+}
+.board-wrap{
+  padding:20px;
+  overflow:auto;
+}
+.kanban-board{
+  display:flex;
+  gap:16px;
+  min-height:520px;
+  align-items:flex-start;
+}
+.kanban-col{
+  width:300px;
+  min-width:300px;
+  flex-shrink:0;
+}
+.kanban-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:14px 16px;
+  border:1px solid var(--border);
+  border-radius:18px 18px 0 0;
+  background:#f8fafc;
+}
+.kanban-title{
+  font-size:14px;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.kanban-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+.col-count{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:28px;
+  height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  background:#e0f2fe;
+  color:#0369a1;
+  font-size:12px;
+  font-weight:800;
+}
+.kanban-body{
+  background:linear-gradient(180deg,#fcfdff 0%,#f8fafc 100%);
+  border:1px solid var(--border);
+  border-top:none;
+  border-radius:0 0 18px 18px;
+  padding:14px;
+  min-height:440px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  transition:.2s ease;
+}
+.kanban-body.drag-over{
+  background:#eff6ff;
+  outline:2px dashed rgba(14,165,233,.35);
+  outline-offset:-6px;
+}
+.kanban-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-left:4px solid transparent;
+  border-radius:16px;
+  padding:14px;
+  box-shadow:var(--shadow);
+  cursor:grab;
+  transition:.2s ease;
+}
+.kanban-card:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--shadow-lg);
+}
+.kanban-card.disabled{
+  opacity:.76;
+  cursor:default;
+}
+.k-company{
+  font-size:15px;
+  font-weight:800;
+  color:var(--text);
+  line-height:1.5;
+}
+.k-name{
+  font-size:13px;
+  color:var(--text2);
+  margin-top:6px;
+  line-height:1.6;
+}
+.k-amount{
+  font-size:22px;
+  font-weight:800;
+  color:var(--primary);
+  margin-top:10px;
+}
+.k-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:12px;
+}
+.k-owner{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  color:var(--text2);
+  font-size:12px;
+}
+.k-avatar{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  font-size:11px;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  flex-shrink:0;
+}
+.k-owner-name{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.k-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:12px;
+  flex-wrap:wrap;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+.pill-blue{background:#eff6ff;color:#1d4ed8}
+.pill-green{background:#ecfdf5;color:#047857}
+.pill-orange{background:#fff7ed;color:#c2410c}
+.pill-red{background:#fef2f2;color:#b91c1c}
+.pill-gray{background:#f1f5f9;color:#475569}
+.k-stage{
+  font-size:12px;
+  color:var(--text3);
+}
+.empty{
+  padding:36px 20px;
+  text-align:center;
+  color:var(--text2);
+  border:1px dashed var(--border);
+  border-radius:16px;
+  background:rgba(255,255,255,.8);
+}
+@media (max-width:1080px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:860px){
+  body{display:block}
+  .sidebar{width:100%;padding:14px}
+  .nav{padding:16px 0 0}
+  .nav-section{margin-bottom:10px}
+  .nav a{margin:0 0 6px}
+  .topbar{position:static;flex-direction:column;align-items:flex-start}
+  .toolbar{justify-content:flex-start}
+  .stats{grid-template-columns:1fr}
+  .kanban-col{width:280px;min-width:280px}
+}
 </style>
 </head>
 <body>
-
-<div class="sidebar">
-  <div class="logo">
-    <div class="logo-icon">🚀</div>
-    <div><div class="logo-text">SalesPilot</div><div class="logo-sub">CRM · AI Powered</div></div>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">概览</div>
-    <a class="nav-item" href="page-dashboard.html"><span class="icon">📊</span>销售仪表盘</a>
-    <a class="nav-item" href="page-funnel.html"><span class="icon">🔻</span>商机漏斗</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">销售管理</div>
-    <a class="nav-item active" href="page-kanban.html"><span class="icon">🗂️</span>商机看板<span class="nav-badge">12</span></a>
-    <a class="nav-item" href="page-leads.html"><span class="icon">👥</span>线索管理<span class="nav-badge">8</span></a>
-    <a class="nav-item" href="page-opportunities.html"><span class="icon">💼</span>商机列表</a>
-    <a class="nav-item" href="page-report.html"><span class="icon">📋</span>商机通报</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">AI 能力</div>
-    <a class="nav-item" href="ai-input.html"><span class="icon">🤖</span>AI 智能录入</a>
-    <a class="nav-item" href="card-input.html"><span class="icon">🎯</span>价值评估</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">配置</div>
-    <a class="nav-item" href="page-metadata.html"><span class="icon">⚙️</span>元数据配置</a>
-  </div>
-</div>
-
-<div class="main">
-  <div class="topbar">
-    <div class="topbar-title">商机看板 <span class="topbar-sub">拖拽式阶段管理</span></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost">🔽 筛选</button>
-      <button class="btn btn-primary" onclick="location.href='page-opportunities.html?action=new'">➕ 新建</button>
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-title">SalesPilot</div>
     </div>
-    <div class="avatar">管</div>
-  </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-label">概览</div>
+        <a href="crm-system.html">工作台</a>
+        <a href="page-dashboard.html">销售仪表盘</a>
+        <a href="page-funnel.html">商机漏斗</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">销售管理</div>
+        <a href="page-kanban.html" class="active">商机看板</a>
+        <a href="page-leads.html">线索管理</a>
+        <a href="page-opportunities.html">商机列表</a>
+        <a href="page-report.html">商机通报</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">AI 能力</div>
+        <a href="ai-input.html">AI 智能录入</a>
+        <a href="card-input.html">价值评估</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">配置</div>
+        <a href="page-metadata.html">元数据配置</a>
+      </div>
+    </nav>
+  </aside>
 
-  <div class="content">
-    <div class="section-header">
+  <main class="main">
+    <div class="topbar">
       <div>
-        <div class="section-title">商机看板</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:2px">拖拽卡片可更改阶段 · 12 个活跃商机</div>
+        <h1>商机看板</h1>
+        <p id="board-summary">
+          正在从数据库加载商机数据...
+        </p>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-ghost" id="refresh-btn">刷新</button>
+        <!-- <button class="btn btn-ghost">筛选</button> -->
+        <button class="btn btn-primary" onclick="location.href='page-opportunities.html?action=new'">新建商机</button>
+        <div class="avatar" id="user-avatar">U</div>
       </div>
     </div>
-    <div class="kanban-board" id="kanban-board"></div>
-  </div>
-</div>
 
+    <div class="content">
+      <div class="notice">
+        当前页面支持拖拽修改商机阶段。只有负责人本人或管理员可以操作卡片阶段变更；
+        “赢单”和“输单”会作为结果阶段单独统计。
+      </div>
+
+      <section class="stats">
+        <div class="stat-card">
+          <div class="stat-label">全部商机</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-hint">当前系统内全部商机数量</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">活跃商机</div>
+          <div class="stat-value" id="stat-active">0</div>
+          <div class="stat-hint">处于推进阶段的商机数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">赢单数量</div>
+          <div class="stat-value" id="stat-win">0</div>
+          <div class="stat-hint">阶段为赢单</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">输单数量</div>
+          <div class="stat-value" id="stat-lost">0</div>
+          <div class="stat-hint">阶段为输单</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>阶段看板</h2>
+            <span>支持按阶段查看全部商机，并通过拖拽更新销售推进状态。</span>
+          </div>
+          <span id="result-count">0 条记录</span>
+        </div>
+
+        <div class="board-wrap">
+          <div class="kanban-board" id="kanban-board"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script src="crm-common.js"></script>
 <script>
-var opps = [
-  {id:1,company:'北京保险集团',name:'智能客服升级',amount:280,stage:'方案认可',owner:'张三',type:'老客户',probability:75},
-  {id:2,company:'上海物流公司',name:'呼叫中心建设',amount:150,stage:'有效接触',owner:'李四',type:'新客户',probability:30},
-  {id:3,company:'深圳科技集团',name:'AI质检部署',amount:420,stage:'签约回款',owner:'王五',type:'老客户',probability:95},
-  {id:4,company:'广州零售连锁',name:'会员营销系统',amount:85,stage:'收集信息',owner:'赵六',type:'新客户',probability:10},
-  {id:5,company:'杭州电商平台',name:'智能外呼机器人',amount:200,stage:'方案认可',owner:'张三',type:'老客户',probability:70},
-  {id:6,company:'成都制造企业',name:'智能客服系统',amount:120,stage:'拿到预算',owner:'李四',type:'新客户',probability:50},
-  {id:7,company:'武汉通信运营商',name:'人机协同平台',amount:350,stage:'方案认可',owner:'王五',type:'老客户',probability:80},
-  {id:8,company:'南京政务服务',name:'12345热线升级',amount:180,stage:'收集信息',owner:'赵六',type:'新客户',probability:15},
-  {id:9,company:'北京保险集团',name:'催收机器人',amount:95,stage:'签约回款',owner:'张三',type:'老客户',probability:90},
-  {id:10,company:'上海物流公司',name:'物流客服外包',amount:65,stage:'有效接触',owner:'李四',type:'新客户',probability:35},
-  {id:11,company:'深圳科技集团',name:'智能培训系统',amount:160,stage:'拿到预算',owner:'王五',type:'老客户',probability:55},
-  {id:12,company:'广州零售连锁',name:'门店客服系统',amount:75,stage:'收集信息',owner:'赵六',type:'新客户',probability:10}
-];
+var currentUser = CRMApp.requireAuth();
+var opps = [];
+var draggedOppId = '';
+var stageOrder = ['初步接触', '方案报价', '合同谈判', '赢单', '输单'];
+var activeStageMap = {'初步接触': true, '方案报价': true, '合同谈判': true};
+var stageColors = {
+  '初步接触': '#94A3B8',
+  '方案报价': '#0EA5E9',
+  '合同谈判': '#8B5CF6',
+  '赢单': '#10B981',
+  '输单': '#EF4444'
+};
 
-var stages = ['收集信息','有效接触','拿到预算','方案认可','签约回款'];
-var stageColors = {'收集信息':'#94A3B8','有效接触':'#0EA5E9','拿到预算':'#8B5CF6','方案认可':'#F59E0B','签约回款':'#10B981'};
-var ownerColors = {'张三':'#3B82F6','李四':'#10B981','王五':'#8B5CF6','赵六':'#F59E0B'};
+function formatAmount(value) {
+  return '¥' + Number(value || 0).toLocaleString('zh-CN');
+}
+
+function getAvatarColor(name) {
+  var colors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4'];
+  var text = String(name || 'U');
+  var code = text.charCodeAt(0) || 0;
+  return colors[code % colors.length];
+}
+
+function normalizeOpp(item) {
+  var custom = item.custom_fields || {};
+  return {
+    id: item.id,
+    name: item.name || '未命名商机',
+    company: custom.company || custom.customer_name || '未填写客户',
+    amount: Number(item.amount || 0),
+    stage: item.stage || '初步接触',
+    probability: Number(item.probability || 0),
+    ownerId: item.owner && item.owner.id ? item.owner.id : '',
+    ownerName: item.owner && item.owner.username ? item.owner.username : '未分配',
+    customerType: custom.customer_type || ''
+  };
+}
+
+function canEditOpportunity(item) {
+  return CRMApp.canEditOwner(currentUser, item.ownerId);
+}
+
+function getTypeClass(type) {
+  if (!type) return 'pill pill-gray';
+  if (type.indexOf('重点') >= 0 || type.indexOf('VIP') >= 0) return 'pill pill-green';
+  if (type.indexOf('新') >= 0) return 'pill pill-blue';
+  return 'pill pill-orange';
+}
+
+function getProbabilityClass(value) {
+  var num = Number(value || 0);
+  if (num >= 80) return 'pill pill-green';
+  if (num >= 50) return 'pill pill-blue';
+  if (num >= 30) return 'pill pill-orange';
+  return 'pill pill-red';
+}
+
+function clearDragState() {
+  var columns = document.querySelectorAll('.kanban-body');
+  Array.prototype.forEach.call(columns, function(column) {
+    column.classList.remove('drag-over');
+  });
+}
+
+function setUserUI() {
+  var username = (currentUser && (currentUser.username || currentUser.name)) || 'U';
+  document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
+}
+
+function renderSummary() {
+  var total = opps.length;
+  var active = opps.filter(function(item) {
+    return !!activeStageMap[item.stage];
+  }).length;
+  var winCount = opps.filter(function(item) {
+    return item.stage === '赢单';
+  }).length;
+  var lostCount = opps.filter(function(item) {
+    return item.stage === '输单';
+  }).length;
+
+  var totalBadge = document.getElementById('kanban-total-badge');
+  if (totalBadge) {
+    totalBadge.textContent = total.toLocaleString('zh-CN');
+  }
+  document.getElementById('stat-total').textContent = total.toLocaleString('zh-CN');
+  document.getElementById('stat-active').textContent = active.toLocaleString('zh-CN');
+  document.getElementById('stat-win').textContent = winCount.toLocaleString('zh-CN');
+  document.getElementById('stat-lost').textContent = lostCount.toLocaleString('zh-CN');
+  document.getElementById('result-count').textContent = total.toLocaleString('zh-CN') + ' 条记录';
+  document.getElementById('board-summary').textContent =
+    '全部 ' + total.toLocaleString('zh-CN') +
+    ' 个商机，活跃 ' + active.toLocaleString('zh-CN') +
+    ' 个，赢单 ' + winCount.toLocaleString('zh-CN') +
+    ' 个，输单 ' + lostCount.toLocaleString('zh-CN') +
+    ' 个；仅本人或管理员可拖拽更新阶段。';
+}
 
 function renderKanban() {
   var board = document.getElementById('kanban-board');
-  var html = '';
-  stages.forEach(function(stage) {
-    var stageOpps = opps.filter(function(o){return o.stage === stage});
-    html += '<div class="kanban-col"><div class="kanban-header"><span>'+stage+'</span><span class="col-count">'+stageOpps.length+'</span></div><div class="kanban-body">';
-    stageOpps.forEach(function(o) {
-      html += '<div class="kanban-card" style="border-left-color:'+stageColors[stage]+'"><div class="k-company">'+o.company+'</div><div style="font-size:12px;color:var(--text2)">'+o.name+'</div><div class="k-amount">¥'+o.amount+'万</div><div class="k-meta"><div class="k-owner"><div class="k-avatar" style="background:'+ownerColors[o.owner]+'">'+o.owner[0]+'</div>'+o.owner+'</div><span class="tag tag-blue">'+o.probability+'%</span></div></div>';
-    });
-    html += '</div></div>';
-  });
-  board.innerHTML = html;
-}
+  renderSummary();
 
-// 检查用户权限
-function checkPermission() {
-  var user = localStorage.getItem('crm_user');
-  if (!user) {
-    window.location.href = 'login.html';
-    return null;
+  if (!opps.length) {
+    board.innerHTML = '<div class="empty" style="width:100%">暂无商机数据</div>';
+    return;
   }
-  return JSON.parse(user);
+
+  var html = '';
+  stageOrder.forEach(function(stage) {
+    var stageOpps = opps.filter(function(item) {
+      return item.stage === stage;
+    });
+
+    html += '<div class="kanban-col">';
+    html +=   '<div class="kanban-header">';
+    html +=     '<div class="kanban-title"><span class="kanban-dot" style="background:' + stageColors[stage] + '"></span>' + CRMApp.escapeHtml(stage) + '</div>';
+    html +=     '<span class="col-count">' + stageOpps.length + '</span>';
+    html +=   '</div>';
+    html +=   '<div class="kanban-body" data-stage="' + CRMApp.escapeHtml(stage) + '">';
+
+    if (!stageOpps.length) {
+      html += '<div class="empty">将商机拖拽到这个阶段</div>';
+    }
+
+    stageOpps.forEach(function(item) {
+      var editable = canEditOpportunity(item);
+      var ownerName = item.ownerName || '未分配';
+      var ownerShort = ownerName.slice(0, 1).toUpperCase();
+
+      html += '<div class="kanban-card' + (editable ? '' : ' disabled') + '" style="border-left-color:' + stageColors[stage] + '" draggable="' + (editable ? 'true' : 'false') + '" data-opp-id="' + item.id + '" title="' + (editable ? '可拖拽更新阶段' : '仅负责人或管理员可拖拽') + '">';
+      html +=   '<div class="k-company">' + CRMApp.escapeHtml(item.company) + '</div>';
+      html +=   '<div class="k-name">' + CRMApp.escapeHtml(item.name) + '</div>';
+      html +=   '<div class="k-amount">' + formatAmount(item.amount) + '</div>';
+      html +=   '<div class="k-meta">';
+      html +=     '<div class="k-owner">';
+      html +=       '<div class="k-avatar" style="background:' + getAvatarColor(ownerName) + '">' + CRMApp.escapeHtml(ownerShort) + '</div>';
+      html +=       '<span class="k-owner-name">' + CRMApp.escapeHtml(ownerName) + '</span>';
+      html +=     '</div>';
+      html +=     '<span class="' + getProbabilityClass(item.probability) + '">' + Number(item.probability || 0).toLocaleString('zh-CN') + '%</span>';
+      html +=   '</div>';
+      html +=   '<div class="k-foot">';
+      html +=     '<span class="' + getTypeClass(item.customerType) + '">' + CRMApp.escapeHtml(item.customerType || '未分类') + '</span>';
+      html +=     '<span class="k-stage">' + CRMApp.escapeHtml(item.stage) + '</span>';
+      html +=   '</div>';
+      html += '</div>';
+    });
+
+    html +=   '</div>';
+    html += '</div>';
+  });
+
+  board.innerHTML = html;
+  bindDragEvents();
 }
 
-// 页面加载时检查权限
+function bindDragEvents() {
+  var cards = document.querySelectorAll('.kanban-card[draggable="true"]');
+  Array.prototype.forEach.call(cards, function(card) {
+    card.addEventListener('dragstart', function(event) {
+      draggedOppId = card.getAttribute('data-opp-id') || '';
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedOppId);
+    });
+
+    card.addEventListener('dragend', function() {
+      draggedOppId = '';
+      clearDragState();
+    });
+  });
+
+  var columns = document.querySelectorAll('.kanban-body');
+  Array.prototype.forEach.call(columns, function(column) {
+    column.addEventListener('dragover', function(event) {
+      event.preventDefault();
+      column.classList.add('drag-over');
+    });
+
+    column.addEventListener('dragleave', function() {
+      column.classList.remove('drag-over');
+    });
+
+    column.addEventListener('drop', async function(event) {
+      event.preventDefault();
+      clearDragState();
+
+      var nextStage = column.getAttribute('data-stage') || '';
+      var oppId = draggedOppId || event.dataTransfer.getData('text/plain');
+      if (!oppId || !nextStage) return;
+
+      var current = opps.find(function(item) {
+        return String(item.id) === String(oppId);
+      });
+      if (!current || current.stage === nextStage) return;
+
+      try {
+        await CRMApp.apiRequest('/api/opportunities/' + oppId + '/stage', {
+          method: 'PATCH',
+          body: {
+            opp_id: oppId,
+            stage: nextStage
+          }
+        });
+        await loadOpportunities();
+      } catch (error) {
+        alert(error.message || '商机阶段更新失败');
+      }
+    });
+  });
+}
+
+async function loadOpportunities() {
+  var board = document.getElementById('kanban-board');
+  document.getElementById('board-summary').textContent = '正在从数据库加载商机数据...';
+  board.innerHTML = '<div class="empty" style="width:100%">正在加载商机数据...</div>';
+
+  try {
+    var page = 1;
+    var pageSize = 100;
+    var allOpps = [];
+
+    while (true) {
+      var payload = await CRMApp.apiRequest('/api/opportunities?page=' + page + '&page_size=' + pageSize);
+      var rows = (payload && payload.data) || [];
+      var total = Number((payload && payload.total) || 0);
+
+      allOpps = allOpps.concat(rows.map(normalizeOpp));
+
+      if (!rows.length || allOpps.length >= total) {
+        break;
+      }
+      page += 1;
+    }
+
+    opps = allOpps;
+    renderKanban();
+  } catch (error) {
+    document.getElementById('board-summary').textContent = error.message || '加载失败';
+    board.innerHTML = '<div class="empty" style="width:100%">数据加载失败，请检查后端服务和登录状态</div>';
+  }
+}
+
+document.getElementById('refresh-btn').addEventListener('click', loadOpportunities);
+
 document.addEventListener('DOMContentLoaded', function() {
-  checkPermission();
-  renderKanban();
+  if (currentUser) {
+    setUserUI();
+    loadOpportunities();
+  }
 });
 </script>
 </body>

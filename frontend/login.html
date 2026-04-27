@@ -1,419 +1,363 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SalesPilot CRM - 用户登录</title>
-<style>
-:root{
-  --bg:#f4f7fb;
-  --surface:#ffffff;
-  --surface-soft:rgba(255,255,255,0.8);
-  --primary:#0f766e;
-  --primary-dark:#115e59;
-  --accent:#f59e0b;
-  --border:#dbe4ee;
-  --text:#0f172a;
-  --text-muted:#475569;
-  --danger:#dc2626;
-  --shadow:0 22px 54px rgba(15,23,42,0.14);
-  --radius:24px;
-}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SalesPilot CRM - 登录</title>
+  <style>
+    :root{
+      --bg:#eef4fb;
+      --surface:rgba(255,255,255,.9);
+      --primary:#0f766e;
+      --primary-dark:#115e59;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#d8e3ef;
+      --danger:#dc2626;
+      --shadow:0 28px 64px rgba(15,23,42,.16);
+      --radius:24px;
+    }
 
-*{box-sizing:border-box;margin:0;padding:0}
+    *{box-sizing:border-box;margin:0;padding:0}
 
-body{
-  min-height:100vh;
-  font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(15,118,110,0.16), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(245,158,11,0.15), transparent 30%),
-    linear-gradient(160deg, #eef4fb 0%, #f8fafc 48%, #edf6f3 100%);
-  color:var(--text);
-}
+    body{
+      min-height:100vh;
+      font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(15,118,110,.15), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(217,119,6,.14), transparent 28%),
+        linear-gradient(160deg,#eef4fb 0%,#f8fafc 52%,#edf6f3 100%);
+    }
 
-.page{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:32px 18px;
-}
+    .page{
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px 18px;
+    }
 
-.panel{
-  width:min(980px, 100%);
-  display:grid;
-  grid-template-columns:1.05fr 0.95fr;
-  background:var(--surface-soft);
-  backdrop-filter:blur(18px);
-  border:1px solid rgba(255,255,255,0.7);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  overflow:hidden;
-}
+    .panel{
+      width:min(980px,100%);
+      display:grid;
+      grid-template-columns:1.08fr .92fr;
+      overflow:hidden;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      background:var(--surface);
+      border:1px solid rgba(255,255,255,.7);
+      backdrop-filter:blur(16px);
+    }
 
-.hero{
-  position:relative;
-  padding:44px 40px;
-  background:
-    linear-gradient(140deg, rgba(15,118,110,0.96), rgba(17,94,89,0.92)),
-    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0));
-  color:#fff;
-}
+    .hero{
+      position:relative;
+      padding:44px 38px;
+      color:#fff;
+      background:
+        linear-gradient(145deg, rgba(15,118,110,.98), rgba(17,94,89,.9)),
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,0));
+    }
 
-.hero::after{
-  content:"";
-  position:absolute;
-  right:-70px;
-  bottom:-70px;
-  width:220px;
-  height:220px;
-  border-radius:50%;
-  background:rgba(255,255,255,0.08);
-}
+    .hero::after{
+      content:"";
+      position:absolute;
+      right:-72px;
+      bottom:-72px;
+      width:230px;
+      height:230px;
+      border-radius:50%;
+      background:rgba(255,255,255,.08);
+    }
 
-.brand-tag{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 14px;
-  border-radius:999px;
-  background:rgba(255,255,255,0.12);
-  font-size:13px;
-  letter-spacing:0.04em;
-}
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.14);
+      font-size:13px;
+      letter-spacing:.04em;
+    }
 
-.hero h1{
-  margin-top:24px;
-  font-size:34px;
-  line-height:1.16;
-}
+    .hero h1{
+      margin-top:24px;
+      font-size:34px;
+      line-height:1.18;
+    }
 
-.hero p{
-  margin-top:16px;
-  max-width:420px;
-  color:rgba(255,255,255,0.88);
-  line-height:1.72;
-  font-size:15px;
-}
+    .hero p{
+      margin-top:16px;
+      max-width:430px;
+      font-size:15px;
+      line-height:1.72;
+      color:rgba(255,255,255,.88);
+    }
 
-.hero-points{
-  margin-top:28px;
-  display:grid;
-  gap:14px;
-}
+    .hero-points{
+      margin-top:28px;
+      display:grid;
+      gap:14px;
+    }
 
-.hero-point{
-  padding:14px 16px;
-  border:1px solid rgba(255,255,255,0.14);
-  border-radius:16px;
-  background:rgba(255,255,255,0.08);
-}
+    .hero-point{
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.08);
+    }
 
-.hero-point strong{
-  display:block;
-  margin-bottom:6px;
-  font-size:15px;
-}
+    .hero-point strong{
+      display:block;
+      margin-bottom:6px;
+      font-size:15px;
+    }
 
-.hero-point span{
-  font-size:13px;
-  line-height:1.6;
-  color:rgba(255,255,255,0.82);
-}
+    .hero-point span{
+      font-size:13px;
+      line-height:1.6;
+      color:rgba(255,255,255,.82);
+    }
 
-.form-wrap{
-  padding:44px 36px;
-  background:rgba(255,255,255,0.92);
-}
+    .form-wrap{
+      padding:44px 36px;
+      background:rgba(255,255,255,.95);
+    }
 
-.form-head h2{
-  font-size:28px;
-}
+    .form-head h2{
+      font-size:28px;
+    }
 
-.form-head p{
-  margin-top:10px;
-  color:var(--text-muted);
-  font-size:14px;
-  line-height:1.7;
-}
+    .form-head p{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.7;
+    }
 
-.account-notice{
-  margin-top:22px;
-  padding:14px 16px;
-  border-radius:16px;
-  border:1px solid rgba(245,158,11,0.25);
-  background:rgba(245,158,11,0.1);
-  color:#92400e;
-  font-size:13px;
-  line-height:1.7;
-}
+    .error{
+      display:none;
+      margin:0 0 16px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(220,38,38,.16);
+      background:rgba(220,38,38,.08);
+      color:var(--danger);
+      font-size:13px;
+      line-height:1.6;
+    }
 
-form{
-  margin-top:28px;
-}
+    form{margin-top:28px}
 
-.field{
-  margin-bottom:18px;
-}
+    .field{margin-bottom:18px}
 
-.label{
-  display:block;
-  margin-bottom:8px;
-  font-size:14px;
-  font-weight:600;
-  color:#334155;
-}
+    .label{
+      display:block;
+      margin-bottom:8px;
+      font-size:14px;
+      font-weight:600;
+      color:#334155;
+    }
 
-.input{
-  width:100%;
-  border:1px solid var(--border);
-  border-radius:14px;
-  background:#fff;
-  padding:14px 16px;
-  font-size:15px;
-  color:var(--text);
-  transition:border-color .2s ease, box-shadow .2s ease;
-}
+    .input{
+      width:100%;
+      padding:14px 16px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:#fff;
+      color:var(--text);
+      font-size:15px;
+      transition:border-color .2s ease, box-shadow .2s ease;
+    }
 
-.input:focus{
-  outline:none;
-  border-color:rgba(15,118,110,0.6);
-  box-shadow:0 0 0 4px rgba(15,118,110,0.12);
-}
+    .input:focus{
+      outline:none;
+      border-color:rgba(15,118,110,.6);
+      box-shadow:0 0 0 4px rgba(15,118,110,.12);
+    }
 
-.hint{
-  margin-top:8px;
-  font-size:12px;
-  color:#64748b;
-}
+    .submit{
+      width:100%;
+      padding:14px 18px;
+      border:none;
+      border-radius:14px;
+      font-size:15px;
+      font-weight:700;
+      color:#fff;
+      background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+      box-shadow:0 14px 28px rgba(15,118,110,.24);
+      cursor:pointer;
+      transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+    }
 
-.error-message{
-  display:none;
-  margin:0 0 16px;
-  padding:12px 14px;
-  border-radius:14px;
-  border:1px solid rgba(220,38,38,0.16);
-  background:rgba(220,38,38,0.08);
-  color:var(--danger);
-  font-size:13px;
-  line-height:1.6;
-}
+    .submit:hover:not(:disabled){
+      transform:translateY(-1px);
+      box-shadow:0 18px 30px rgba(15,118,110,.28);
+    }
 
-.submit{
-  width:100%;
-  border:none;
-  border-radius:14px;
-  padding:14px 18px;
-  font-size:15px;
-  font-weight:700;
-  color:#fff;
-  background:linear-gradient(135deg, var(--primary), var(--primary-dark));
-  box-shadow:0 14px 28px rgba(15,118,110,0.24);
-  cursor:pointer;
-  transition:transform .2s ease, box-shadow .2s ease, opacity .2s ease;
-}
+    .submit:disabled{
+      opacity:.78;
+      cursor:wait;
+    }
 
-.submit:hover:not(:disabled){
-  transform:translateY(-1px);
-  box-shadow:0 18px 30px rgba(15,118,110,0.28);
-}
+    .footer{
+      margin-top:18px;
+      text-align:center;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.7;
+    }
 
-.submit:disabled{
-  opacity:0.75;
-  cursor:wait;
-}
+    .footer strong{
+      color:var(--primary-dark);
+    }
 
-.footer-note{
-  margin-top:18px;
-  text-align:center;
-  font-size:13px;
-  color:#64748b;
-  line-height:1.7;
-}
-
-.footer-note strong{
-  color:var(--primary-dark);
-}
-
-@media (max-width:860px){
-  .panel{
-    grid-template-columns:1fr;
-  }
-
-  .hero,
-  .form-wrap{
-    padding:32px 24px;
-  }
-
-  .hero h1{
-    font-size:28px;
-  }
-}
-</style>
+    @media (max-width:860px){
+      .panel{grid-template-columns:1fr}
+      .hero,.form-wrap{padding:32px 24px}
+      .hero h1{font-size:28px}
+    }
+  </style>
 </head>
 <body>
-<div class="page">
-  <div class="panel">
-    <section class="hero">
-      <div class="brand-tag">SalesPilot CRM</div>
-      <h1>统一用户名登录</h1>
-      <p>系统只支持用户名和密码登录，不使用邮箱登录，也不开放用户自助注册。</p>
-      <div class="hero-points">
-        <div class="hero-point">
-          <strong>账号发放</strong>
-          <span>所有账号由管理员统一创建和分配，页面不提供注册入口。</span>
-        </div>
-        <div class="hero-point">
-          <strong>登录方式</strong>
-          <span>请输入用户名和密码登录，后端只按用户名校验账号。</span>
-        </div>
-        <div class="hero-point">
-          <strong>测试账号</strong>
-          <span>当前测试账号为 admin，测试密码为 123456。</span>
-        </div>
-      </div>
-    </section>
+  <div class="page">
+    <div class="panel">
+      <section class="hero">
+        <h1>账号密码登录</h1>
+        <p>
+          暂时不开放自助注册。
+        </p>
 
-    <section class="form-wrap">
-      <div class="form-head">
-        <h2>用户登录</h2>
-        <p>登录后进入 CRM 工作台。没有账号时，请联系管理员发放。</p>
-      </div>
+      </section>
 
-      <div class="account-notice">
-        账号仅允许由管理员发放。当前测试环境可使用 admin / 123456 登录。
-      </div>
-
-      <form id="login-form">
-        <div class="error-message" id="error-message"></div>
-
-        <div class="field">
-          <label class="label" for="username">用户名</label>
-          <input class="input" type="text" id="username" autocomplete="username" placeholder="请输入用户名" required>
-          <div class="hint">示例：admin</div>
+      <section class="form-wrap">
+        <div class="form-head">
+          <h2>登录</h2>
         </div>
 
-        <div class="field">
-          <label class="label" for="password">密码</label>
-          <input class="input" type="password" id="password" autocomplete="current-password" placeholder="请输入密码" required>
+        <form id="login-form">
+          <div class="error" id="error-box"></div>
+
+          <div class="field">
+            <label class="label" for="username">用户名</label>
+            <input class="input" id="username" type="text" autocomplete="username" placeholder="请输入用户名" required />
+          </div>
+
+          <div class="field">
+            <label class="label" for="password">密码</label>
+            <input class="input" id="password" type="password" autocomplete="current-password" placeholder="请输入密码" required />
+          </div>
+
+          <button class="submit" type="submit" id="submit-btn">登录</button>
+        </form>
+
+        <div class="footer">
+          登录后会自动跳转。若需要新账号，请联系 <strong>管理员</strong>。
         </div>
-
-        <button type="submit" class="submit" id="submit-btn">登录系统</button>
-      </form>
-
-      <div class="footer-note">
-        没有账号或需要重置密码时，请联系 <strong>系统管理员</strong>。
-      </div>
-    </section>
+      </section>
+    </div>
   </div>
-</div>
 
+<script src="crm-common.js"></script>
 <script>
-function getApiBaseUrl() {
-  var params = new URLSearchParams(window.location.search);
-  var queryValue = params.get('apiBase');
-  var savedValue = localStorage.getItem('crm_api_base');
-  var rawBase = queryValue || savedValue;
+  function getApiBaseUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var queryValue = params.get('apiBase');
+    var savedValue = localStorage.getItem('crm_api_base');
+    var rawBase = queryValue || savedValue;
 
-  if (rawBase) {
-    return rawBase.replace(/\/$/, '');
+    if (rawBase) {
+      return rawBase.replace(/\/$/, '');
+    }
+
+    var hostname = window.location.hostname;
+    var protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+
+    if (window.location.protocol === 'file:' || !hostname) {
+      return 'http://127.0.0.1:8000';
+    }
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://127.0.0.1:8000';
+    }
+
+    return protocol + '//' + hostname + ':8000';
   }
 
-  if (window.location.protocol === 'file:' || ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1) {
-    return 'http://127.0.0.1:8000';
+  function showError(message) {
+    var box = document.getElementById('error-box');
+    box.textContent = message;
+    box.style.display = 'block';
   }
 
-  return window.location.origin.replace(/\/$/, '');
-}
+  function clearError() {
+    var box = document.getElementById('error-box');
+    box.textContent = '';
+    box.style.display = 'none';
+  }
 
-function showError(message) {
-  var errorMessage = document.getElementById('error-message');
-  errorMessage.textContent = message;
-  errorMessage.style.display = 'block';
-}
+  async function login(username, password) {
+    var response = await fetch(getApiBaseUrl() + '/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username,
+        password: password
+      })
+    });
 
-function clearError() {
-  var errorMessage = document.getElementById('error-message');
-  errorMessage.textContent = '';
-  errorMessage.style.display = 'none';
-}
+    var data = null;
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = null;
+    }
 
-async function requestLogin(username, password) {
-  var formData = new URLSearchParams();
-  formData.append('username', username);
-  formData.append('password', password);
+    if (!response.ok) {
+      throw new Error((data && data.detail) || '登录失败，请稍后重试。');
+    }
 
-  var response = await fetch(getApiBaseUrl() + '/api/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: formData.toString()
+    return data;
+  }
+
+  document.getElementById('login-form').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    clearError();
+
+    var submitButton = document.getElementById('submit-btn');
+    var username = document.getElementById('username').value.trim();
+    var password = document.getElementById('password').value;
+
+    if (!username || !password) {
+      showError('请输入完整的用户名和密码。');
+      return;
+    }
+
+    var originalText = submitButton.textContent;
+    submitButton.disabled = true;
+    submitButton.textContent = '登录中...';
+
+    try {
+      var apiBase = getApiBaseUrl();
+      var payload = await login(username, password);
+      CRMApp.setAuthSession(payload.user, payload.access_token, apiBase);
+      CRMApp.redirectToDefault(payload.user);
+    } catch (error) {
+      showError(error.message || '登录失败，请稍后重试。');
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
   });
 
-  var data = null;
-  try {
-    data = await response.json();
-  } catch (error) {
-    data = null;
-  }
-
-  if (!response.ok) {
-    throw new Error((data && data.detail) || '登录失败，请检查用户名和密码。');
-  }
-
-  return data;
-}
-
-document.getElementById('login-form').addEventListener('submit', async function(event) {
-  event.preventDefault();
-  clearError();
-
-  var submitButton = document.getElementById('submit-btn');
-  var username = document.getElementById('username').value.trim();
-  var password = document.getElementById('password').value;
-
-  if (!username || !password) {
-    showError('请输入完整的用户名和密码。');
-    return;
-  }
-
-  submitButton.disabled = true;
-  submitButton.textContent = '登录中...';
-
-  try {
-    var payload = await requestLogin(username, password);
-    var userData = {
-      id: payload.user.id,
-      email: payload.user.email,
-      username: payload.user.username,
-      role: payload.user.role,
-      permissions: payload.user.permissions || null,
-      is_active: payload.user.is_active !== false,
-      loginTime: new Date().toISOString()
-    };
-
-    localStorage.setItem('crm_user', JSON.stringify(userData));
-    localStorage.setItem('crm_token', payload.access_token);
-    localStorage.setItem('crm_api_base', getApiBaseUrl());
-
-    window.location.href = 'crm-system.html';
-  } catch (error) {
-    showError(error.message || '登录失败，请稍后再试。');
-  } finally {
-    submitButton.disabled = false;
-    submitButton.textContent = '登录系统';
-  }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  var user = localStorage.getItem('crm_user');
-  var token = localStorage.getItem('crm_token');
-  if (user && token) {
-    window.location.href = 'crm-system.html';
-  }
-});
+  document.addEventListener('DOMContentLoaded', function() {
+    if (CRMApp.isAuthenticated()) {
+      CRMApp.redirectToDefault();
+    }
+  });
 </script>
 </body>
 </html>

@@ -6,96 +6,187 @@
 <title>SalesPilot CRM</title>
 <style>
 :root{
-  --primary:#0EA5E9;
-  --primary-dark:#0284C7;
-  --primary-light:#E0F2FE;
-  --bg:#F1F5F9;
-  --surface:#FFFFFF;
-  --border:#E2E8F0;
-  --text:#1E293B;
-  --text2:#64748B;
-  --success:#10B981;
-  --danger:#EF4444;
-  --shadow:0 1px 3px rgba(15,23,42,0.08),0 10px 25px rgba(15,23,42,0.08);
-  --radius:18px;
+  --primary:#0ea5e9;
+  --primary-dark:#0284c7;
+  --primary-light:#e0f2fe;
+  --bg:#f1f5f9;
+  --surface:#ffffff;
+  --border:#e2e8f0;
+  --text:#1e293b;
+  --text2:#64748b;
+  --danger:#ef4444;
+  --shadow:0 1px 3px rgba(15,23,42,.08),0 10px 25px rgba(15,23,42,.08);
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
+
 body{
   min-height:100vh;
-  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
   background:
     radial-gradient(circle at top left, rgba(14,165,233,.18), transparent 28%),
     radial-gradient(circle at bottom right, rgba(16,185,129,.14), transparent 26%),
     var(--bg);
   color:var(--text);
 }
-.page{min-height:100vh;padding:24px;display:flex;justify-content:center;align-items:center}
+
+.page{
+  min-height:100vh;
+  padding:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
 .panel{
   width:min(1180px,100%);
-  background:rgba(255,255,255,.92);
-  backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.7);
-  border-radius:28px;
-  box-shadow:var(--shadow);
   overflow:hidden;
+  border-radius:28px;
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(255,255,255,.7);
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(16px);
 }
+
 .hero{
   padding:28px 32px;
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:20px;
-  background:linear-gradient(135deg,#0EA5E9,#2563EB 45%,#0F172A 100%);
   color:#fff;
+  background:linear-gradient(135deg,#0ea5e9,#2563eb 45%,#0f172a 100%);
 }
+
 .hero-left h1{font-size:30px;font-weight:800;letter-spacing:-.4px}
-.hero-left p{margin-top:10px;font-size:14px;line-height:1.7;opacity:.9;max-width:620px}
-.hero-right{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.12);padding:14px 16px;border-radius:18px}
-.user-avatar{
-  width:52px;height:52px;border-radius:16px;
-  display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.2);font-size:20px;font-weight:800;
+.hero-left p{margin-top:10px;font-size:14px;line-height:1.7;opacity:.9;max-width:640px}
+
+.hero-right{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border-radius:18px;
+  background:rgba(255,255,255,.12);
 }
+
+.user-avatar{
+  width:52px;
+  height:52px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.2);
+  font-size:20px;
+  font-weight:800;
+}
+
 .user-name{font-size:17px;font-weight:700}
 .user-meta{font-size:13px;opacity:.85;margin-top:4px}
+
 .role-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  margin-top:8px;padding:4px 10px;border-radius:999px;
-  background:rgba(255,255,255,.18);font-size:12px;font-weight:700;
+  display:inline-flex;
+  align-items:center;
+  margin-top:8px;
+  padding:4px 10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  font-size:12px;
+  font-weight:700;
 }
+
 .content{padding:28px 32px 32px}
-.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px}
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:20px;
+}
+
 .section-head h2{font-size:18px;font-weight:800}
 .section-head p{font-size:13px;color:var(--text2);margin-top:4px}
+
+.section-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.secondary-btn{
+  border:none;
+  border-radius:12px;
+  padding:11px 16px;
+  cursor:pointer;
+  background:#e0f2fe;
+  color:var(--primary-dark);
+  font-weight:700;
+  box-shadow:0 8px 18px rgba(14,165,233,.12);
+}
+
 .logout-btn{
-  border:none;border-radius:12px;padding:11px 16px;cursor:pointer;
-  background:#fff;color:var(--danger);font-weight:700;box-shadow:0 8px 18px rgba(15,23,42,.08);
+  border:none;
+  border-radius:12px;
+  padding:11px 16px;
+  cursor:pointer;
+  background:#fff;
+  color:var(--danger);
+  font-weight:700;
+  box-shadow:0 8px 18px rgba(15,23,42,.08);
 }
-.menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+
+.menu-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
+}
+
 .menu-item{
-  border:1px solid var(--border);border-radius:20px;padding:20px;
-  background:linear-gradient(180deg,#fff,#F8FAFC);
-  cursor:pointer;transition:.2s transform,.2s box-shadow,.2s border-color;
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:20px;
+  background:linear-gradient(180deg,#fff,#f8fafc);
+  cursor:pointer;
+  transition:.2s transform,.2s box-shadow,.2s border-color;
 }
-.menu-item:hover{transform:translateY(-3px);box-shadow:0 14px 24px rgba(15,23,42,.08);border-color:#BAE6FD}
+
+.menu-item:hover{
+  transform:translateY(-3px);
+  box-shadow:0 14px 24px rgba(15,23,42,.08);
+  border-color:#bae6fd;
+}
+
+.menu-item.admin{
+  border-color:#fde68a;
+  background:linear-gradient(180deg,#fffbeb,#ffffff);
+}
+
 .menu-icon{
-  width:48px;height:48px;border-radius:14px;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--primary-light);font-size:24px;margin-bottom:14px;
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--primary-light);
+  font-size:24px;
+  margin-bottom:14px;
 }
+
+.menu-item.admin .menu-icon{background:#fef3c7}
+
 .menu-title{font-size:16px;font-weight:800}
 .menu-desc{font-size:13px;color:var(--text2);line-height:1.7;margin-top:8px;min-height:44px}
 .menu-note{font-size:12px;color:var(--primary-dark);margin-top:12px;font-weight:700}
-.menu-item.admin{border-color:#FDE68A;background:linear-gradient(180deg,#FFFBEB,#FFFFFF)}
-.menu-item.admin .menu-icon{background:#FEF3C7}
-.empty-tip{
-  display:none;text-align:center;padding:32px 20px;border:1px dashed var(--border);
-  border-radius:18px;color:var(--text2);font-size:14px;background:#fff;
-}
+
 @media (max-width:900px){
   .hero{flex-direction:column;align-items:flex-start}
   .menu-grid{grid-template-columns:repeat(2,1fr)}
 }
+
 @media (max-width:640px){
   .page{padding:14px}
   .hero,.content{padding:20px}
@@ -108,8 +199,8 @@ body{
   <div class="panel">
     <div class="hero">
       <div class="hero-left">
-        <h1>SalesPilot CRM</h1>
-        <p>用户端可以查看全部业务信息，但只能编辑自己填报的线索和商机；管理员可以发放账号并维护全部数据。</p>
+        <h1>SalesPilot</h1>
+        <!-- <p>当前系统使用简化的用户名密码登录。所有业务页面默认对已登录用户开放，`admin` 账号额外拥有用户管理入口。</p> -->
       </div>
       <div class="hero-right">
         <div class="user-avatar" id="user-avatar">A</div>
@@ -125,69 +216,70 @@ body{
       <div class="section-head">
         <div>
           <h2>工作台入口</h2>
-          <p>页面会按账号权限自动展示，管理员会额外看到用户管理入口。</p>
+          <p>点击模块卡片进入对应页面。用户管理页面仅对 `admin` 账号显示。</p>
         </div>
-        <button class="logout-btn" onclick="logout()">退出登录</button>
+        <div class="section-actions">
+          <button class="secondary-btn" onclick="goToChangePassword()">修改密码</button>
+          <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
       </div>
 
       <div class="menu-grid" id="menu-grid">
-        <div class="menu-item" data-page="page-dashboard.html" data-permission="dashboard">
+        <div class="menu-item" data-page="page-dashboard.html">
           <div class="menu-icon">📊</div>
           <div class="menu-title">销售仪表盘</div>
           <div class="menu-desc">查看整体销售趋势和关键指标。</div>
-          <div class="menu-note">全员可查看</div>
+          <div class="menu-note">共享概览</div>
         </div>
-        <div class="menu-item" data-page="page-funnel.html" data-permission="funnel">
+        <div class="menu-item" data-page="page-funnel.html">
           <div class="menu-icon">🔻</div>
           <div class="menu-title">商机漏斗</div>
           <div class="menu-desc">查看各阶段转化情况。</div>
-          <div class="menu-note">全员可查看</div>
-        </div>
-        <div class="menu-item" data-page="page-kanban.html" data-permission="kanban">
-          <div class="menu-icon">🗂️</div>
-          <div class="menu-title">商机看板</div>
-          <div class="menu-desc">按阶段查看商机推进情况。</div>
           <div class="menu-note">共享视图</div>
         </div>
-        <div class="menu-item" data-page="page-leads.html" data-permission="leads">
+        <div class="menu-item" data-page="page-kanban.html">
+          <div class="menu-icon">🗂️</div>
+          <div class="menu-title">商机看板</div>
+          <div class="menu-desc">按阶段查看和推进商机。</div>
+          <div class="menu-note">共享视图</div>
+        </div>
+        <div class="menu-item" data-page="page-leads.html">
           <div class="menu-icon">👥</div>
           <div class="menu-title">线索管理</div>
-          <div class="menu-desc">查看全部线索，只有本人和管理员可编辑。</div>
-          <div class="menu-note">共享可见 / 按归属编辑</div>
+          <div class="menu-desc">查看线索并维护自己的跟进记录。</div>
+          <div class="menu-note">按归属编辑</div>
         </div>
-        <div class="menu-item" data-page="page-opportunities.html" data-permission="opportunities">
+        <div class="menu-item" data-page="page-opportunities.html">
           <div class="menu-icon">💼</div>
           <div class="menu-title">商机列表</div>
-          <div class="menu-desc">查看全部商机，只有本人和管理员可编辑。</div>
-          <div class="menu-note">共享可见 / 按归属编辑</div>
+          <div class="menu-desc">浏览和编辑商机数据。</div>
+          <div class="menu-note">按归属编辑</div>
         </div>
-        <div class="menu-item" data-page="page-report.html" data-permission="report">
-          <div class="menu-icon">📋</div>
+        <div class="menu-item" data-page="page-report.html">
+          <div class="menu-icon">📈</div>
           <div class="menu-title">商机通报</div>
-          <div class="menu-desc">浏览业务汇总报表。</div>
+          <div class="menu-desc">查看汇总分析和统计结果。</div>
           <div class="menu-note">只读分析</div>
         </div>
-        <div class="menu-item" data-page="ai-input.html" data-permission="ai_input">
+        <div class="menu-item" data-page="ai-input.html">
           <div class="menu-icon">🤖</div>
           <div class="menu-title">AI 智能录入</div>
-          <div class="menu-desc">语音或文字解析后保存为自己的商机。</div>
-          <div class="menu-note">保存后归属于当前登录人</div>
+          <div class="menu-desc">把语音或文字快速解析成商机数据。</div>
+          <div class="menu-note">保存到当前账号</div>
         </div>
-        <div class="menu-item" data-page="card-input.html" data-permission="card_input">
-          <div class="menu-icon">🎯</div>
+        <div class="menu-item" data-page="card-input.html">
+          <div class="menu-icon">🧭</div>
           <div class="menu-title">价值评估</div>
-          <div class="menu-desc">评估线索和商机价值。</div>
-          <div class="menu-note">辅助决策</div>
+          <div class="menu-desc">评估客户意向和商机价值。</div>
+          <div class="menu-note">辅助判断</div>
         </div>
-        <div class="menu-item admin" data-page="admin-users.html" data-permission="user_management" id="admin-card">
+        <div class="menu-item admin" data-page="admin-users.html" id="admin-card">
           <div class="menu-icon">⚙️</div>
           <div class="menu-title">用户管理</div>
-          <div class="menu-desc">管理员发放账号、重置密码、维护模块权限。</div>
-          <div class="menu-note">仅管理员</div>
+          <div class="menu-desc">查看、新增、编辑和删除用户账号。</div>
+          <div class="menu-note">仅 admin</div>
         </div>
       </div>
-
-      <div class="empty-tip" id="empty-tip">当前账号没有可访问的工作台模块，请联系管理员配置权限。</div>
     </div>
   </div>
 </div>
@@ -196,54 +288,39 @@ body{
 <script>
 var currentUser = CRMApp.requireAuth();
 
-function getRoleLabel(role) {
-  var map = { admin: '管理员', manager: '经理', sales: '用户' };
-  return map[role] || role;
-}
-
 function updateUserInterface() {
-  if (!currentUser) return;
+  if (!currentUser) {
+    return;
+  }
   document.getElementById('user-avatar').textContent = (currentUser.username || 'U').charAt(0).toUpperCase();
   document.getElementById('user-name').textContent = currentUser.username || '未命名用户';
-  document.getElementById('user-meta').textContent = (currentUser.email || '无邮箱') + ' · 在线';
-  document.getElementById('role-badge').textContent = getRoleLabel(currentUser.role);
+  document.getElementById('user-meta').textContent = '用户名登录 · 在线';
+  document.getElementById('role-badge').textContent = CRMApp.isAdmin(currentUser) ? '管理员账号' : '普通账号';
 }
 
 function setupMenu() {
-  if (!currentUser) return;
-  var cards = Array.prototype.slice.call(document.querySelectorAll('.menu-item'));
-  var visibleCount = 0;
-
-  cards.forEach(function(card) {
-    var page = card.getAttribute('data-page');
-    var permissionKey = card.getAttribute('data-permission');
-    var allowed = true;
-
-    if (currentUser.permissions && Object.prototype.hasOwnProperty.call(currentUser.permissions, permissionKey)) {
-      allowed = !!currentUser.permissions[permissionKey];
+  if (!currentUser) {
+    return;
+  }
+  Array.prototype.slice.call(document.querySelectorAll('.menu-item')).forEach(function(card) {
+    if (card.id === 'admin-card' && !CRMApp.isAdmin(currentUser)) {
+      card.style.display = 'none';
+      return;
     }
-
-    if (card.id === 'admin-card' && currentUser.role !== 'admin') {
-      allowed = false;
-    }
-
-    card.style.display = allowed ? 'block' : 'none';
-    if (!allowed) return;
-
-    visibleCount += 1;
     card.addEventListener('click', function() {
-      window.location.href = page;
+      window.location.href = card.getAttribute('data-page');
     });
   });
-
-  document.getElementById('empty-tip').style.display = visibleCount ? 'none' : 'block';
 }
 
 function logout() {
-  localStorage.removeItem('crm_user');
-  localStorage.removeItem('crm_token');
+  CRMApp.clearAuth();
   localStorage.removeItem('crm_api_base');
-  window.location.href = 'login.html';
+  CRMApp.redirectToLogin();
+}
+
+function goToChangePassword() {
+  window.location.href = 'change-password.html';
 }
 
 updateUserInterface();

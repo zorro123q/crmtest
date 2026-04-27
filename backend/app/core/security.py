@@ -1,5 +1,6 @@
 """
 Authentication and authorization helpers.
+包含 JWT 签名/验证、密码哈希（bcrypt）、当前用户鉴权及权限检查。
 """
 
 from __future__ import annotations
@@ -9,12 +10,12 @@ import hashlib
 import hmac
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-# 明文密码存储，不使用加密
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -22,7 +23,6 @@ from app.db.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-ROLE_WEIGHT = {"sales": 1, "manager": 2, "admin": 3}
 SUPPORTED_HMAC_ALGORITHMS = {
     "HS256": hashlib.sha256,
     "HS384": hashlib.sha384,
@@ -108,18 +108,33 @@ def _decode_jwt(token: str, secret_key: str, algorithm: str) -> dict[str, Any]:
 
 
 def hash_password(plain: str) -> str:
-    """明文存储密码（测试环境使用）"""
-    return plain
+    """使用 bcrypt 对密码进行哈希处理，返回哈希字符串。
+    自动加盐，安全强度默认 rounds=12。
+    """
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 def verify_password(plain: str, stored: str) -> bool:
-    """明文密码比较"""
+    """验证明文密码与存储的 bcrypt 哈希是否匹配。
+    同时兼容旧版明文密码（迁移期间过渡支持）。
+    """
     if not stored:
         return False
+    # 如果是 bcrypt 哈希格式（以 $2b$ 或 $2a$ 开头），使用 bcrypt 校验
+    if stored.startswith("$2b$") or stored.startswith("$2a$"):
+        try:
+            return bcrypt.checkpw(plain.encode("utf-8"), stored.encode("utf-8"))
+        except Exception:
+            return False
+    # 兼容旧版明文密码（过渡期）
     return plain == stored
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def is_admin_user(user) -> bool:
+    return bool(user and getattr(user, "username", "") == "admin")
+
+
+def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -134,7 +149,7 @@ def decode_token(token: str) -> dict[str, Any]:
     except TokenValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token 无效或已过期",
+            detail="Token is invalid or expired",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
@@ -143,7 +158,6 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ):
-    """Parse the bearer token and return the current user."""
     from sqlalchemy import select
 
     from app.models import User
@@ -151,55 +165,54 @@ async def get_current_user(
     payload = decode_token(token)
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Token payload 缺少 sub 字段")
+        raise HTTPException(status_code=401, detail="Token is missing the user id")
 
     try:
         normalized_user_id = str(UUID(str(user_id)))
     except ValueError as exc:
-        raise HTTPException(status_code=401, detail="Token 中的用户 ID 非法") from exc
+        raise HTTPException(status_code=401, detail="Token contains an invalid user id") from exc
 
     result = await db.execute(select(User).where(User.id == normalized_user_id))
     user = result.scalar_one_or_none()
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="用户不存在或已被禁用")
+    if not user:
+        raise HTTPException(status_code=401, detail="User no longer exists")
     return user
 
 
+def require_admin():
+    async def checker(current_user=Depends(get_current_user)):
+        if not is_admin_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the admin account can perform this action",
+            )
+        return current_user
+
+    return checker
+
+
 def require_role(*roles: str):
-    """Require the current user to have one of the specified roles."""
-
-    async def checker(current_user=Depends(get_current_user)):
-        if current_user.role not in roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"当前角色 [{current_user.role}] 无权执行此操作，需要角色: {list(roles)}",
-            )
-        return current_user
-
-    return checker
+    if "admin" not in roles:
+        return get_current_user
+    return require_admin()
 
 
-def require_min_role(min_role: str):
-    """Require the current user to meet the minimum role weight."""
-
-    async def checker(current_user=Depends(get_current_user)):
-        if ROLE_WEIGHT.get(current_user.role, 0) < ROLE_WEIGHT.get(min_role, 0):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"需要 [{min_role}] 或更高权限",
-            )
-        return current_user
-
-    return checker
+def require_min_role(_: str):
+    return require_admin()
 
 
 def apply_data_scope(query, model, current_user):
-    """All authenticated users can view shared business data."""
-    return query
+    if is_admin_user(current_user):
+        return query
+
+    owner_id_column = getattr(model, "owner_id", None)
+    if owner_id_column is None:
+        return query
+
+    return query.where(owner_id_column == str(getattr(current_user, "id", "")))
 
 
 def can_edit_owned_resource(current_user, owner_id) -> bool:
-    """Sales users may only edit their own records; higher roles can edit all."""
-    if current_user.role == "sales":
-        return str(owner_id) == str(current_user.id)
-    return True
+    if is_admin_user(current_user):
+        return True
+    return str(owner_id or "") == str(getattr(current_user, "id", ""))

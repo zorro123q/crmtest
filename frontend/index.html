@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SalesPilot CRM — 系统入口</title>
+<script src="crm-common.js"></script>
+<script>
+if (CRMApp.isAuthenticated()) {
+  CRMApp.redirectToDefault();
+} else {
+  CRMApp.redirectToLogin();
+}
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0A1628 0%,#1E3A5F 50%,#0A1628 100%);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -75,7 +83,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
   </div>
 
   <div class="cards">
-    <a class="card primary" href="page-dashboard.html">
+    <a class="card primary" href="login.html">
       <div class="card-badge">桌面端</div>
       <div class="card-icon">🖥️</div>
       <div class="card-title">CRM 管理系统</div>

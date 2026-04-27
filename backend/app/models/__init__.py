@@ -1,6 +1,9 @@
 """
 SQLAlchemy ORM models.
 """
+
+from __future__ import annotations
+
 import uuid
 
 from sqlalchemy import (
@@ -9,7 +12,6 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
-    Enum,
     ForeignKey,
     Integer,
     Numeric,
@@ -21,6 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+from app.services.crm_rules_service import DEFAULT_OPPORTUNITY_STAGE
 
 
 def uuid_str() -> str:
@@ -36,14 +39,8 @@ class User(TimestampMixin, Base):
     __tablename__ = "users"
 
     id = Column(String(36), primary_key=True, default=uuid_str)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    username = Column(String(100), nullable=False)
-    hashed_pwd = Column(String(255), nullable=False)
-    role = Column(Enum("admin", "manager", "sales", name="user_role"), nullable=False, default="sales")
-    avatar_url = Column(String(500))
-    is_active = Column(Boolean, default=True)
-    # JSON 字段：存储用户可访问的模块列表，null 表示按角色默认权限
-    permissions = Column(JSON, default=None)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    password = Column(String(255), nullable=False)
 
     opportunities = relationship("Opportunity", back_populates="owner", foreign_keys="Opportunity.owner_id")
     leads = relationship("Lead", back_populates="owner")
@@ -91,17 +88,38 @@ class Lead(TimestampMixin, Base):
     email = Column(String(255))
     phone = Column(String(50))
     source = Column(String(100))
-    status = Column(
-        Enum("New", "Working", "Nurturing", "Converted", "Disqualified", name="lead_status"),
-        default="New",
-    )
+    status = Column(String(50), nullable=False, default="new")
     score = Column(SmallInteger, default=0)
+    card_score = Column(Integer, nullable=False, default=0)
+    card_level = Column(String(1), nullable=False, default="E")
     owner_id = Column(String(36), ForeignKey("users.id"))
     converted_to = Column(String(36))
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    industry = Column(String(100))
+    industry_rank = Column(String(100))
+    scene = Column(String(120))
+    budget = Column(String(100))
+    labor_cost = Column(String(100))
+    daily_calls = Column(String(100))
+    leader_owner = Column(String(100))
+    lowest_price = Column(String(50))
+    initiator_department = Column(String(100))
+    competitor = Column(String(100))
+    bidding_type = Column(String(100))
+    has_ai_project = Column(String(50))
+    customer_service_size = Column(String(100))
+    region = Column(String(100))
+
+    score_detail_json = Column(JSON, default=dict)
     custom_fields = Column(JSON, default=dict)
     ai_extracted = Column(JSON, default=dict)
 
     owner = relationship("User", back_populates="leads")
+
+    @property
+    def owner_username(self) -> str | None:
+        return self.owner.username if self.owner else None
 
 
 class Opportunity(TimestampMixin, Base):
@@ -113,26 +131,65 @@ class Opportunity(TimestampMixin, Base):
     contact_id = Column(String(36), ForeignKey("contacts.id"))
     owner_id = Column(String(36), ForeignKey("users.id"))
 
-    stage = Column(
-        Enum("初步接触", "方案报价", "合同谈判", "赢单", "输单", name="opp_stage"),
-        nullable=False,
-        default="初步接触",
-    )
+    stage = Column(String(100), nullable=False, default=DEFAULT_OPPORTUNITY_STAGE)
+    status = Column(String(50), nullable=False, default="new")
     amount = Column(Numeric(15, 2))
     probability = Column(SmallInteger, default=20)
     close_date = Column(Date)
     source = Column(String(100))
 
+    card_score = Column(Integer, nullable=False, default=0)
+    card_level = Column(String(1), nullable=False, default="E")
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    industry = Column(String(100))
+    industry_rank = Column(String(100))
+    scene = Column(String(120))
+    budget = Column(String(100))
+    labor_cost = Column(String(100))
+    daily_calls = Column(String(100))
+    leader_owner = Column(String(100))
+    lowest_price = Column(String(50))
+    initiator_department = Column(String(100))
+    competitor = Column(String(100))
+    bidding_type = Column(String(100))
+    has_ai_project = Column(String(50))
+    customer_service_size = Column(String(100))
+    region = Column(String(100))
+
+    # 客户商机管理表正式业务字段
+    customer_name = Column(String(255), index=True)
+    customer_type = Column(String(50))
+    requirement_desc = Column(Text)
+    product_name = Column(String(255))
+    estimated_cycle = Column(String(100))
+    opportunity_level = Column(String(10))
+    project_date = Column(String(100))
+    project_members = Column(Text)
+    solution_communication = Column(Text)
+    poc_status = Column(Text)
+    key_person_approved = Column(String(20))
+    bid_probability = Column(String(10))
+    contract_negotiation = Column(Text)
+    project_type = Column(String(100))
+    contract_signed = Column(String(20))
+    handoff_completed = Column(String(20))
+
     ai_confidence = Column(Numeric(4, 3))
     ai_raw_text = Column(Text)
     ai_extracted = Column(JSON, default=dict)
     custom_fields = Column(JSON, default=dict)
+    score_detail_json = Column(JSON, default=dict)
     stage_history = Column(JSON, default=list)
     closed_at = Column(DateTime(timezone=True))
 
     owner = relationship("User", back_populates="opportunities", foreign_keys=[owner_id])
     account = relationship("Account", back_populates="opportunities")
     contact = relationship("Contact", foreign_keys=[contact_id])
+
+    @property
+    def owner_username(self) -> str | None:
+        return self.owner.username if self.owner else None
 
 
 class Activity(Base):

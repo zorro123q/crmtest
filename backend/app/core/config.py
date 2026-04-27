@@ -16,33 +16,33 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # App
     APP_NAME: str = "SalesPilot CRM"
     APP_ENV: str = "development"
 
-    # Database
     DATABASE_URL: str
     DATABASE_SYNC_URL: str
 
-    # JWT
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
 
-    # OpenAI
     OPENAI_API_KEY: str | None = None
-    OPENAI_MODEL: str = "gpt-4o"
+    OPENAI_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    OPENAI_MODEL: str = "qwen-plus"
 
-    # DashScope / Paraformer
     DASHSCOPE_API_KEY: str | None = None
     DASHSCOPE_BASE_URL: str = "https://dashscope.aliyuncs.com"
     PARAFORMER_MODEL: str = "paraformer-v2"
     PARAFORMER_LANGUAGE_HINTS: str = '["zh", "en"]'
-    
-    # Redis
+
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # CORS
+    # 管理员默认密码，生产环境请务必在 .env 中设置强密码
+    ADMIN_DEFAULT_PASSWORD: str = "Admin@2024#CRM"
+
+    # 密码强度：最短长度
+    PASSWORD_MIN_LENGTH: int = 8
+
     CORS_ORIGINS: str = (
         '["http://localhost:3000","http://127.0.0.1:3000",'
         '"http://localhost:5173","http://127.0.0.1:5173",'
@@ -58,5 +58,6 @@ class Settings(BaseSettings):
     @property
     def paraformer_language_hints_list(self) -> List[str]:
         return json.loads(self.PARAFORMER_LANGUAGE_HINTS)
+
 
 settings = Settings()

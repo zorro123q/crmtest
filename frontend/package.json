@@ -1,0 +1,11 @@
+{
+  "name": "salespilot-crm-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static frontend for SalesPilot CRM.",
+  "scripts": {
+    "dev": "node serve.js",
+    "start": "node serve.js",
+    "serve": "node serve.js"
+  }
+}

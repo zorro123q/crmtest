@@ -8,18 +8,15 @@
 :root{--primary:#0EA5E9;--primary-light:#E0F2FE;--accent:#8B5CF6;--success:#10B981;--warning:#F59E0B;--danger:#EF4444;--bg:#F1F5F9;--surface:#FFFFFF;--border:#E2E8F0;--text:#1E293B;--text2:#64748B;--text3:#94A3B8;--shadow:0 1px 3px rgba(15,23,42,0.08)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
-.sidebar{width:240px;background:linear-gradient(180deg,#0F172A 0%,#1E3A5F 50%,#0F172A 100%);color:#CBD5E1;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
-.logo{padding:24px 20px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06)}
-.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,#0EA5E9,#6366F1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
-.logo-text{font-size:18px;font-weight:700;background:linear-gradient(135deg,#fff,#0EA5E9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.logo-sub{font-size:10px;color:#64748B;margin-top:2px}
-.nav-section{padding:16px 0 8px}
-.nav-label{font-size:10px;font-weight:600;color:#475569;letter-spacing:1px;text-transform:uppercase;padding:0 20px 6px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;font-size:14px;border-left:3px solid transparent;transition:all .2s;color:#94A3B8;text-decoration:none}
-.nav-item:hover{background:rgba(14,165,233,.08);color:#E2E8F0}
-.nav-item.active{background:linear-gradient(90deg,rgba(14,165,233,.15) 0%,transparent 100%);color:#fff;font-weight:600;border-left-color:#0EA5E9}
-.nav-item .icon{font-size:18px;width:22px}
-.nav-badge{margin-left:auto;background:linear-gradient(135deg,#0EA5E9,#6366F1);color:#fff;font-size:10px;border-radius:12px;padding:2px 8px;font-weight:700}
+.sidebar{width:236px;background:linear-gradient(180deg,#0f172a 0%,#1e3a5f 55%,#0f172a 100%);color:#cbd5e1;padding:22px 0}
+.logo{padding:0 20px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-title{font-size:22px;font-weight:800;color:#fff}
+.logo-sub{font-size:12px;color:#94a3b8;margin-top:6px}
+.nav{padding:16px 12px 0}
+.nav-section{margin-bottom:10px}
+.nav-label{padding:0 12px 6px;font-size:10px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase}
+.nav a{display:flex;align-items:center;gap:10px;color:#94a3b8;text-decoration:none;padding:11px 12px;border-radius:12px;font-size:14px;margin-bottom:6px}
+.nav a:hover,.nav a.active{background:rgba(14,165,233,.14);color:#fff}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .topbar{background:linear-gradient(145deg,#FFFFFF,#F8FAFC);border-bottom:1px solid var(--border);padding:0 28px;height:64px;display:flex;align-items:center;gap:20px}
 .topbar-title{font-size:20px;font-weight:700;color:var(--text);flex:1}
@@ -38,37 +35,46 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
 .field-type{font-size:12px;color:var(--text2);padding:3px 8px;background:var(--surface);border-radius:4px;border:1px solid var(--border)}
 .field-required{font-size:11px;color:#fff;background:var(--danger);padding:2px 6px;border-radius:4px}
 .field-desc{font-size:12px;color:var(--text3)}
+.guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.guide-step{background:linear-gradient(180deg,#FFFFFF,#F8FAFC);border:1px solid var(--border);border-radius:12px;padding:16px}
+.guide-step h4{font-size:14px;margin-bottom:8px}
+.guide-step p,.guide-step li{font-size:13px;line-height:1.7;color:var(--text2)}
+.guide-step ul,.guide-step ol{padding-left:18px;margin-top:8px}
+.guide-code{margin-top:10px;background:#0F172A;color:#E2E8F0;border-radius:10px;padding:12px;font-size:12px;line-height:1.6;overflow:auto}
+.guide-note{margin-top:14px;padding:14px 16px;border-radius:12px;background:#FFF7ED;border:1px solid #FED7AA;font-size:13px;line-height:1.7;color:#9A3412}
 </style>
 </head>
 <body>
 
-<div class="sidebar">
+<aside class="sidebar">
   <div class="logo">
-    <div class="logo-icon">🚀</div>
-    <div><div class="logo-text">SalesPilot</div><div class="logo-sub">CRM · AI Powered</div></div>
+    <div class="logo-title">SalesPilot</div>
   </div>
-  <div class="nav-section">
-    <div class="nav-label">概览</div>
-    <a class="nav-item" href="page-dashboard.html"><span class="icon">📊</span>销售仪表盘</a>
-    <a class="nav-item" href="page-funnel.html"><span class="icon">🔻</span>商机漏斗</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">销售管理</div>
-    <a class="nav-item" href="page-kanban.html"><span class="icon">🗂️</span>商机看板<span class="nav-badge">12</span></a>
-    <a class="nav-item" href="page-leads.html"><span class="icon">👥</span>线索管理<span class="nav-badge">8</span></a>
-    <a class="nav-item" href="page-opportunities.html"><span class="icon">💼</span>商机列表</a>
-    <a class="nav-item" href="page-report.html"><span class="icon">📋</span>商机通报</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">AI 能力</div>
-    <a class="nav-item" href="ai-input.html"><span class="icon">🤖</span>AI 智能录入</a>
-    <a class="nav-item" href="card-input.html"><span class="icon">🎯</span>价值评估</a>
-  </div>
-  <div class="nav-section">
-    <div class="nav-label">配置</div>
-    <a class="nav-item active" href="page-metadata.html"><span class="icon">⚙️</span>元数据配置</a>
-  </div>
-</div>
+  <nav class="nav">
+    <div class="nav-section">
+      <div class="nav-label">概览</div>
+      <a href="crm-system.html">工作台</a>
+      <a href="page-dashboard.html">销售仪表盘</a>
+      <a href="page-funnel.html">商机漏斗</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">销售管理</div>
+      <a href="page-kanban.html">商机看板</a>
+      <a href="page-leads.html">线索管理</a>
+      <a href="page-opportunities.html">商机列表</a>
+      <a href="page-report.html">商机通报</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">AI 能力</div>
+      <a href="ai-input.html">AI 智能录入</a>
+      <a href="card-input.html">价值评估</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">配置</div>
+      <a href="page-metadata.html" class="active">元数据配置</a>
+    </div>
+  </nav>
+</aside>
 
 <div class="main">
   <div class="topbar">
@@ -89,14 +95,68 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
     <!-- 商机 Schema -->
     <div class="schema-card">
       <div class="schema-title">
-        💼 商机管理 Schema
+        💼 商机列表 Schema
         <span class="schema-tag">Opportunity</span>
       </div>
       <div class="field-list" id="opp-fields"></div>
     </div>
+<div class="schema-card">
+  <div class="schema-title">
+    手机和网页联调指南
+    <span class="schema-tag">Debug Guide</span>
+  </div>
+  <div class="guide-grid">
+    <div class="guide-step">
+      <h4>1. 启动本地前端静态服务</h4>
+      <p>当前前端目录自带 <code>serve.js</code>，默认端口是 <code>3000</code>。如果要让手机访问，服务绑定地址要从 <code>127.0.0.1</code> 改成 <code>0.0.0.0</code>。</p>
+      <pre class="guide-code">$env:HOST='0.0.0.0'
+$env:PORT='3000'
+npm run dev</pre>
+    </div>
+    <div class="guide-step">
+      <h4>2. 电脑浏览器联调</h4>
+      <p>电脑本机直接访问下面地址即可打开本页：</p>
+      <pre class="guide-code">http://127.0.0.1:3000/page-metadata.html</pre>
+      <p>本页属于静态展示页，只看页面效果时不依赖后端接口。</p>
+    </div>
+    <div class="guide-step">
+      <h4>3. 手机浏览器联调</h4>
+      <p>手机和电脑接入同一局域网后，在电脑执行 <code>ipconfig</code>，找到 IPv4 地址，例如 <code>192.168.1.23</code>，然后在手机浏览器打开：</p>
+      <pre class="guide-code">http://192.168.1.23:3000/page-metadata.html</pre>
+    </div>
+    <div class="guide-step">
+      <h4>4. 涉及接口时的地址设置</h4>
+      <p>项目公共脚本 <code>crm-common.js</code> 在局域网访问时，会默认把接口基地址当成当前页面域名。若后端实际运行在 <code>8000</code> 端口，先在浏览器控制台执行：</p>
+      <pre class="guide-code">localStorage.setItem('crm_api_base', 'http://192.168.1.23:8000')</pre>
+      <p>然后刷新页面，再调登录、列表或提交类接口。</p>
+    </div>
+    <div class="guide-step">
+      <h4>5. 后端跨域配置</h4>
+      <p>后端当前默认只允许 <code>localhost</code> 和 <code>127.0.0.1</code> 来源。手机从 <code>http://192.168.1.23:3000</code> 打开页面时，需要把这个来源加入后端的 <code>CORS_ORIGINS</code>。</p>
+      <pre class="guide-code">["http://localhost:3000","http://127.0.0.1:3000","http://192.168.1.23:3000"]</pre>
+    </div>
+    <div class="guide-step">
+      <h4>6. 推荐联调顺序</h4>
+      <ol>
+        <li>先在电脑浏览器确认静态页能正常打开。</li>
+        <li>再用手机访问同一页面，检查字号、滚动、点击区域和布局换行。</li>
+        <li>需要调接口时，再补充 <code>crm_api_base</code> 和后端 CORS。</li>
+        <li>排查手机问题时，用 Chrome 远程调试或手机浏览器开发者工具查看 Console 和 Network。</li>
+      </ol>
+    </div>
+  </div>
+  <div class="guide-note">
+    只预览 <code>page-metadata.html</code> 时，启动静态服务就够了。只有切到登录页、列表页或录入页这类接口页面时，才需要处理后端地址和跨域。
   </div>
 </div>
 
+  </div>
+</div>
+
+<script src="crm-common.js"></script>
+<script>
+CRMApp.requireAuth();
+</script>
 <script>
 var leadSchema = [
   {name:'客户名称',type:'文本',required:true,desc:'客户公司全称'},

@@ -1,4 +1,4 @@
--- Migration: Add permissions column to users table
--- Adds a JSON column for fine-grained module-level permissions
+-- Legacy placeholder.
+-- Simplified username/password auth no longer uses users.permissions.
 
-ALTER TABLE users ADD COLUMN permissions JSON NULL DEFAULT NULL AFTER is_active;
+SELECT 'skip legacy permissions migration' AS message;

@@ -1,6 +1,6 @@
 """
 AI service layer.
-- /api/ai/parse -> GPT extracts CRM fields from free text
+- /api/ai/parse -> LLM extracts CRM fields from free text
 - /api/ai/transcribe -> DashScope paraformer-v2 transcribes audio
 """
 
@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -16,29 +17,35 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+from app.services.scoring_service import (
+    get_scoring_field_keys,
+    get_scoring_fields,
+    normalize_card_type,
+    normalize_scoring_dimensions,
+)
 
 
 CRM_SYSTEM_PROMPT = """
-Role: 你是一个资深的销售运营专家，擅长从非结构化的语音对话中提取核心销售信息。
+Role: You are a CRM extraction assistant.
+Task: Convert the raw transcript or note into a JSON object for CRM opportunity creation.
+Output: Return JSON only, without markdown or explanation.
 
-Task: 请将以下非结构化文本（语音转文字结果）解析为结构化的 CRM 数据对象。
-
-Output Schema (严格返回 JSON，不要有任何额外文字):
+Schema:
 {
-  "customer_name": "公司或个人名称（字符串）",
-  "deal_value": 预估合同金额（纯数字，单位：元。如提到50万则填500000）,
-  "stage": "商机阶段（必须从以下取值：初步接洽、方案报价、合同谈判、赢单、输单）",
-  "key_needs": ["客户核心痛点或需求1", "需求2"],
-  "next_step": "下一步跟进动作及时间点",
-  "confidence_score": 0到1之间的置信度（浮点数，综合考虑信息完整度）
+  "customer_name": "string",
+  "deal_value": 0,
+  "stage": "初步接触 | 方案报价 | 合同谈判 | 赢单 | 输单",
+  "key_needs": ["string"],
+  "next_step": "string",
+  "confidence_score": 0.0
 }
 
-Constraints:
-1. 如果文本中未提到某项信息，填入字符串 "Unknown"（deal_value 未知时填 0）
-2. 严禁编造数据，基于原文推理
-3. stage 只能取定义的五个枚举值之一，根据语义判断最接近的阶段
-4. confidence_score 综合考虑：关键字段完整度、信息明确程度、上下文清晰度
-5. key_needs 至少包含1个元素，最多5个
+Rules:
+1. Use "Unknown" for missing strings, 0 for missing deal_value.
+2. stage must be one of the five allowed Chinese values.
+3. key_needs must be an array with at least one item.
+4. confidence_score must be between 0 and 1.
+5. Do not invent facts that are not supported by the text.
 """.strip()
 
 
@@ -52,24 +59,32 @@ _DASHSCOPE_POLL_INTERVAL_SECONDS = 1.0
 _DASHSCOPE_POLL_TIMEOUT_SECONDS = 180.0
 
 
+def _get_openai_base_url() -> str:
+    return getattr(
+        settings,
+        "OPENAI_BASE_URL",
+        "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    ).rstrip("/")
+
+
 def _get_openai_client() -> AsyncOpenAI:
     if not settings.OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY 未配置，无法调用文本解析模型")
+        raise RuntimeError("OPENAI_API_KEY is not configured")
 
     global _openai_client
     if _openai_client is None:
         _openai_client = AsyncOpenAI(
             api_key=settings.OPENAI_API_KEY,
+            base_url=_get_openai_base_url(),
             timeout=60.0,
         )
     return _openai_client
 
 
 def _get_dashscope_api_key() -> str:
-    api_key = settings.DASHSCOPE_API_KEY
-    if not api_key:
-        raise RuntimeError("DASHSCOPE_API_KEY 未配置，无法调用 paraformer-v2 转写")
-    return api_key
+    if not settings.DASHSCOPE_API_KEY:
+        raise RuntimeError("DASHSCOPE_API_KEY is not configured")
+    return settings.DASHSCOPE_API_KEY
 
 
 def _dashscope_headers(
@@ -100,18 +115,17 @@ def _build_dashscope_error_message(action: str, response: httpx.Response) -> str
     message = payload.get("message") or payload.get("msg")
     request_id = payload.get("request_id")
 
-    detail_parts = [f"HTTP {response.status_code}"]
+    parts = [f"HTTP {response.status_code}"]
     if code:
-        detail_parts.append(str(code))
+        parts.append(str(code))
     if message:
-        detail_parts.append(str(message))
+        parts.append(str(message))
     if request_id:
-        detail_parts.append(f"request_id={request_id}")
+        parts.append(f"request_id={request_id}")
+    if len(parts) == 1 and response.text:
+        parts.append(response.text.strip())
 
-    if len(detail_parts) == 1 and response.text:
-        detail_parts.append(response.text.strip())
-
-    return f"{action}失败：" + " | ".join(detail_parts)
+    return f"{action} failed: " + " | ".join(parts)
 
 
 def _normalize_upload_filename(filename: str) -> str:
@@ -131,11 +145,11 @@ async def _fetch_upload_policy(client: httpx.AsyncClient) -> dict[str, Any]:
         },
     )
     if response.status_code != 200:
-        raise RuntimeError(_build_dashscope_error_message("获取 DashScope 临时上传凭证", response))
+        raise RuntimeError(_build_dashscope_error_message("fetch upload policy", response))
 
     data = response.json().get("data")
     if not isinstance(data, dict):
-        raise RuntimeError("获取 DashScope 临时上传凭证失败：返回数据缺少 data 字段")
+        raise RuntimeError("fetch upload policy failed: missing data payload")
     return data
 
 
@@ -150,7 +164,7 @@ async def _upload_audio_to_dashscope(
     upload_host = policy.get("upload_host")
     upload_dir = policy.get("upload_dir")
     if not upload_host or not upload_dir:
-        raise RuntimeError("获取 DashScope 临时上传凭证失败：缺少 upload_host 或 upload_dir")
+        raise RuntimeError("fetch upload policy failed: missing upload_host or upload_dir")
 
     object_key = f"{str(upload_dir).rstrip('/')}/{_normalize_upload_filename(filename)}"
     form_data = {
@@ -179,7 +193,7 @@ async def _upload_audio_to_dashscope(
         },
     )
     if upload_response.status_code != 200:
-        raise RuntimeError(_build_dashscope_error_message("上传音频到 DashScope 临时存储", upload_response))
+        raise RuntimeError(_build_dashscope_error_message("upload audio", upload_response))
 
     return f"oss://{object_key}"
 
@@ -212,11 +226,11 @@ async def _submit_transcription_task(client: httpx.AsyncClient, file_url: str) -
         json=_build_transcription_payload(file_url),
     )
     if response.status_code != 200:
-        raise RuntimeError(_build_dashscope_error_message("提交 paraformer-v2 转写任务", response))
+        raise RuntimeError(_build_dashscope_error_message("submit transcription task", response))
 
     task_id = response.json().get("output", {}).get("task_id")
     if not task_id:
-        raise RuntimeError("提交 paraformer-v2 转写任务失败：返回结果缺少 task_id")
+        raise RuntimeError("submit transcription task failed: missing task_id")
     return str(task_id)
 
 
@@ -236,13 +250,13 @@ def _collect_task_error(output: dict[str, Any]) -> str:
         result_errors.append(" | ".join(error_parts))
 
     if result_errors:
-        return "；".join(result_errors)
+        return "; ".join(result_errors)
 
     top_level_parts = []
     for key in ("task_status", "code", "message"):
         if output.get(key):
             top_level_parts.append(str(output[key]))
-    return " | ".join(top_level_parts) or "任务未返回可用结果"
+    return " | ".join(top_level_parts) or "task did not return usable details"
 
 
 async def _wait_for_transcription_result(
@@ -258,7 +272,7 @@ async def _wait_for_transcription_result(
             headers=_dashscope_headers(),
         )
         if response.status_code != 200:
-            raise RuntimeError(_build_dashscope_error_message("查询 paraformer-v2 转写任务", response))
+            raise RuntimeError(_build_dashscope_error_message("query transcription task", response))
 
         output = response.json().get("output", {})
         task_status = output.get("task_status")
@@ -271,13 +285,13 @@ async def _wait_for_transcription_result(
             ]
             if result_urls:
                 return result_urls
-            raise RuntimeError(f"paraformer-v2 转写任务成功但未返回结果：{_collect_task_error(output)}")
+            raise RuntimeError(f"transcription task succeeded but no result url returned: {_collect_task_error(output)}")
 
         if task_status in {"FAILED", "CANCELED"}:
-            raise RuntimeError(f"paraformer-v2 转写任务失败：{_collect_task_error(output)}")
+            raise RuntimeError(f"transcription task failed: {_collect_task_error(output)}")
 
         if asyncio.get_running_loop().time() >= deadline:
-            raise TimeoutError("等待 paraformer-v2 转写结果超时，请稍后重试")
+            raise TimeoutError("waiting for transcription result timed out")
 
         await asyncio.sleep(_DASHSCOPE_POLL_INTERVAL_SECONDS)
 
@@ -288,13 +302,12 @@ async def _download_transcription_text(client: httpx.AsyncClient, result_urls: l
     for result_url in result_urls:
         response = await client.get(result_url)
         if response.status_code != 200:
-            raise RuntimeError(_build_dashscope_error_message("下载 paraformer-v2 转写结果", response))
+            raise RuntimeError(_build_dashscope_error_message("download transcription result", response))
 
         payload = response.json()
         current_fragments: list[str] = []
 
-        transcripts = payload.get("transcripts") or []
-        for item in transcripts:
+        for item in payload.get("transcripts") or []:
             text = item.get("text")
             if text:
                 current_fragments.append(str(text).strip())
@@ -315,55 +328,191 @@ async def _download_transcription_text(client: httpx.AsyncClient, result_urls: l
 
     merged = "\n".join(part for part in fragments if part).strip()
     if not merged:
-        raise RuntimeError("paraformer-v2 未返回可用文本内容")
+        raise RuntimeError("transcription result is empty")
     return merged
 
 
+def _extract_json_text(content: str) -> str:
+    if not content:
+        raise RuntimeError("model returned empty content")
+
+    content = content.strip()
+
+    if content.startswith("```"):
+        content = re.sub(r"^```json\s*", "", content, flags=re.IGNORECASE)
+        content = re.sub(r"^```\s*", "", content)
+        content = re.sub(r"\s*```$", "", content)
+
+    try:
+        json.loads(content)
+        return content
+    except Exception:
+        pass
+
+    match = re.search(r"\{.*\}", content, flags=re.DOTALL)
+    if match:
+        candidate = match.group(0)
+        json.loads(candidate)
+        return candidate
+
+    raise RuntimeError(f"model output is not valid JSON: {content[:300]}")
+
+
+def _build_scoring_dimensions_system_prompt(card_type: str) -> str:
+    normalized_card_type = normalize_card_type(card_type)
+    field_keys = get_scoring_field_keys(normalized_card_type)
+    field_map = get_scoring_fields(normalized_card_type)
+    field_rules = []
+    for field_name in field_keys:
+        field_meta = field_map[field_name]
+        option_rules = ", ".join(
+            f"{option_value}={option_meta['label']}"
+            for option_value, option_meta in field_meta["options"].items()
+        )
+        field_rules.append(f"- {field_name} ({field_meta['label']}): {option_rules}")
+
+    card_label = (
+        "A card (lead intent model)"
+        if normalized_card_type == "A"
+        else "B card (opportunity-to-contract model)"
+    )
+    return f"""
+Role: You extract formal scoring dimensions only.
+Task: Read the {card_label} text and map it to the official scoring field values.
+Output: Return a single JSON object only. No markdown, no explanation, no extra text.
+
+Rules:
+1. The JSON object may only contain these keys: {", ".join(field_keys)}
+2. Every key must be present. Use null when the value cannot be determined.
+3. Every non-null value must be one of the allowed option values for that field.
+4. Never output labels, free-form text, new values, arrays, objects, numbers, or booleans as field values.
+5. If the text is insufficient, use null instead of guessing.
+
+Allowed values:
+{chr(10).join(field_rules)}
+    """.strip()
+
+
+def _normalize_extracted_scoring_dimensions(payload: Any, card_type: str) -> dict[str, str | None]:
+    if not isinstance(payload, dict):
+        raise RuntimeError("AI extraction result is not a valid JSON object")
+
+    normalized_card_type = normalize_card_type(card_type)
+    field_keys = get_scoring_field_keys(normalized_card_type)
+    extra_fields = sorted(set(payload.keys()) - set(field_keys))
+    if extra_fields:
+        raise RuntimeError(f"AI extraction returned invalid fields: {', '.join(extra_fields)}")
+
+    normalized_payload: dict[str, str | None] = {}
+    for field_name in field_keys:
+        value = payload.get(field_name)
+        if value is None:
+            normalized_payload[field_name] = None
+            continue
+        if not isinstance(value, str):
+            raise RuntimeError(f"AI extraction returned a non-string value for {field_name}")
+        stripped = value.strip()
+        normalized_payload[field_name] = stripped or None
+
+    try:
+        return normalize_scoring_dimensions(
+            normalized_payload,
+            card_type=normalized_card_type,
+            allow_extra=False,
+        )
+    except ValueError as exc:
+        raise RuntimeError(f"AI extraction returned invalid enum values: {exc}") from exc
+
+
 async def parse_crm_text(raw_text: str) -> dict[str, Any]:
-    """
-    调用 GPT 模型，将转写文本解析为结构化 CRM 数据。
-    """
+    if not raw_text or not raw_text.strip():
+        raise RuntimeError("input text is empty")
+
     client = _get_openai_client()
 
-    response = await client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": CRM_SYSTEM_PROMPT},
-            {"role": "user", "content": f"请解析以下文本：\n\n{raw_text}"},
-        ],
-        temperature=0.1,
-        max_tokens=800,
-        response_format={"type": "json_object"},
-    )
+    try:
+        response = await client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": CRM_SYSTEM_PROMPT},
+                {"role": "user", "content": raw_text.strip()},
+            ],
+            temperature=0.1,
+            max_tokens=800,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"failed to parse CRM text: model={settings.OPENAI_MODEL}, "
+            f"base_url={_get_openai_base_url()}, error={exc}"
+        ) from exc
 
-    content = response.choices[0].message.content
-    result = json.loads(content)
+    content = response.choices[0].message.content or ""
+    json_text = _extract_json_text(content)
+    result = json.loads(json_text)
 
     result.setdefault("customer_name", "Unknown")
     result.setdefault("deal_value", 0)
-    result.setdefault("stage", "初步接洽")
+    result.setdefault("stage", "初步接触")
     result.setdefault("key_needs", [])
     result.setdefault("next_step", "Unknown")
     result.setdefault("confidence_score", 0.5)
 
-    result["confidence_score"] = max(0.0, min(1.0, float(result["confidence_score"])))
+    if not isinstance(result.get("key_needs"), list):
+        result["key_needs"] = [str(result["key_needs"])] if result.get("key_needs") else []
+    if not result["key_needs"]:
+        result["key_needs"] = ["Unknown"]
+
+    try:
+        result["deal_value"] = int(float(result.get("deal_value", 0) or 0))
+    except Exception:
+        result["deal_value"] = 0
+
+    try:
+        result["confidence_score"] = float(result.get("confidence_score", 0.5))
+    except Exception:
+        result["confidence_score"] = 0.5
+    result["confidence_score"] = max(0.0, min(1.0, result["confidence_score"]))
+
+    usage = getattr(response, "usage", None)
     result["_usage"] = {
-        "prompt_tokens": response.usage.prompt_tokens,
-        "completion_tokens": response.usage.completion_tokens,
+        "prompt_tokens": getattr(usage, "prompt_tokens", 0) if usage else 0,
+        "completion_tokens": getattr(usage, "completion_tokens", 0) if usage else 0,
         "model": settings.OPENAI_MODEL,
+        "base_url": _get_openai_base_url(),
     }
     return result
 
 
+async def extract_scoring_dimensions_from_text(raw_text: str, card_type: str) -> dict[str, str | None]:
+    normalized_card_type = normalize_card_type(card_type)
+    if not raw_text or not raw_text.strip():
+        raise RuntimeError("AI extraction requires non-empty text")
+
+    client = _get_openai_client()
+
+    try:
+        response = await client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": _build_scoring_dimensions_system_prompt(normalized_card_type)},
+                {"role": "user", "content": raw_text.strip()},
+            ],
+            temperature=0.0,
+            max_tokens=900,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"failed to extract scoring dimensions: model={settings.OPENAI_MODEL}, "
+            f"base_url={_get_openai_base_url()}, error={exc}"
+        ) from exc
+
+    content = response.choices[0].message.content or ""
+    json_text = _extract_json_text(content)
+    parsed = json.loads(json_text)
+    return _normalize_extracted_scoring_dimensions(parsed, normalized_card_type)
+
+
 async def transcribe_audio(audio_file_bytes: bytes, filename: str = "audio.webm") -> str:
-    """
-    使用阿里云 DashScope paraformer-v2 进行录音文件转写。
-    流程：
-    1. 申请临时上传凭证
-    2. 上传音频到 DashScope 临时 OSS
-    3. 提交异步转写任务
-    4. 轮询任务状态并下载结果
-    """
     async with httpx.AsyncClient(
         base_url=settings.DASHSCOPE_BASE_URL.rstrip("/"),
         timeout=_DASHSCOPE_REQUEST_TIMEOUT,

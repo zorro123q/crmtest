@@ -108,7 +108,7 @@ body{
       <div class="title">AI 智能录入</div>
       <a class="desktop-link" href="crm-system.html">工作台</a>
     </div>
-    <div class="desc">支持文字粘贴和语音转写。解析完成后保存的商机会自动归属到当前登录账号，普通用户后续也只能编辑自己保存的那部分数据。</div>
+    <!-- <div class="desc">支持文字粘贴和语音转写。解析完成后保存的商机会自动归属到当前登录账号，普通用户后续也只能编辑自己保存的那部分数据。</div> -->
   </div>
 
   <div class="page">
@@ -183,7 +183,8 @@ var chunks = [];
 var isRecording = false;
 
 function setUserInfo() {
-  document.getElementById('user-badge').textContent = (currentUser.username || '当前用户') + ' · 保存后归属本人';
+  // document.getElementById('user-badge').textContent = (currentUser.username || '当前用户') + ' · 保存后归属本人';
+  document.getElementById('user-badge').textContent = (currentUser.username || '当前用户');
 }
 
 function showToast(message) {
@@ -319,7 +320,7 @@ async function saveOpportunity() {
       method: 'POST',
       body: {
         name: (currentResult.customer_name || '未命名客户') + ' - AI录入',
-        stage: currentResult.stage || '初步接洽',
+        stage: currentResult.stage || '初步接触',
         amount: Number(currentResult.deal_value || 0),
         source: 'AI录入',
         custom_fields: {
@@ -339,7 +340,7 @@ async function saveOpportunity() {
     sessionHistory.unshift({
       company: currentResult.customer_name || '未命名客户',
       amount: Number(currentResult.deal_value || 0),
-      stage: currentResult.stage || '初步接洽',
+      stage: currentResult.stage || '初步接触',
       nextStep: currentResult.next_step || '',
       time: new Date().toLocaleString('zh-CN')
     });

@@ -1,377 +1,173 @@
-import re
-from typing import Dict, List, Tuple
+from __future__ import annotations
+
+from typing import Any, Mapping
+
+from app.services.scoring_service import (
+    calculate_card_score,
+    get_max_score,
+    get_scoring_field_keys,
+    get_scoring_fields,
+    normalize_card_type,
+    normalize_scoring_dimensions,
+)
 
 
-A_CARD_DIMS = [
-    {"key": "industry", "name": "客户行业", "max_score": 5},
-    {"key": "rank", "name": "行业排名", "max_score": 5},
-    {"key": "scenario", "name": "客户场景", "max_score": 10},
-    {"key": "budget", "name": "客户预算", "max_score": 5},
-    {"key": "labor", "name": "人力成本", "max_score": 5},
-    {"key": "leadership", "name": "项目推动领导分管", "max_score": 5},
-    {"key": "bid", "name": "招标形式", "max_score": 5},
-    {"key": "headcount", "name": "客服人数", "max_score": 5},
-    {"key": "region", "name": "客户所在区域", "max_score": 10},
-]
-
-B_CARD_DIMS = [
-    {"key": "match", "name": "客户需求匹配度", "max_score": 15},
-    {"key": "budget_clear", "name": "预算明确度", "max_score": 10},
-    {"key": "decision", "name": "决策链清晰度", "max_score": 10},
-    {"key": "competition", "name": "竞争分析", "max_score": 10},
-    {"key": "feasibility", "name": "方案可行性", "max_score": 10},
-    {"key": "intent", "name": "客户合作意向", "max_score": 15},
-    {"key": "timeline", "name": "项目时间紧迫性", "max_score": 10},
-    {"key": "history", "name": "历史合作记录", "max_score": 10},
-]
-
-GRADES = [
-    {"grade": "A", "min_score": 70, "label": "A级 - 重点跟进", "desc": "70 分以上，值得重点跟进，建议按周推进。"},
-    {"grade": "B", "min_score": 60, "label": "B级 - 值得跟进", "desc": "60-69 分，建议保持稳定沟通，争取尽快进入下一阶段。"},
-    {"grade": "C", "min_score": 40, "label": "C级 - 保持联系", "desc": "40-59 分，需要继续补充信息，观察客户变化。"},
-    {"grade": "D", "min_score": 20, "label": "D级 - 谨慎投入", "desc": "20-39 分，可以保持联系，但不建议投入过多资源。"},
-    {"grade": "E", "min_score": 0, "label": "E级 - 暂不优先", "desc": "20 分以下，暂不建议作为重点机会推进。"},
-]
-
-A_SUGGESTIONS = {
-    "A": "重点客户。建议本周内安排负责人深入拜访，明确需求、预算和采购路径。",
-    "B": "优质线索。建议一周内安排电话会议或线上演示，保持每周一次沟通节奏。",
-    "C": "普通线索。建议持续跟进客户动态，补齐预算、场景和决策信息。",
-    "D": "优先级较低。建议降低投入频次，等关键条件更明确后再推进。",
-    "E": "暂时价值有限。保留基础联系即可，把精力优先投向更明确的客户。",
+CARD_COPY: dict[str, dict[str, dict[str, str]]] = {
+    "A": {
+        "A": {
+            "label": "A卡 · 高意向客户",
+            "desc": "正式评分达到 A 级，客户意向和客户价值较高，建议立即安排关键人深度沟通。",
+            "suggestion": "优先推进需求澄清、预算确认和采购路径确认，保持高频跟进。",
+        },
+        "B": {
+            "label": "A卡 · 值得重点跟进",
+            "desc": "正式评分达到 B 级，客户价值较好，建议尽快补齐剩余关键信息。",
+            "suggestion": "围绕场景、预算、负责人和区域继续补充信息，维持稳定跟进节奏。",
+        },
+        "C": {
+            "label": "A卡 · 持续观察",
+            "desc": "正式评分达到 C 级，客户基础条件一般，需要继续判断真实意向和价值。",
+            "suggestion": "先确认场景匹配度和预算区间，再决定是否投入更多资源。",
+        },
+        "D": {
+            "label": "A卡 · 谨慎投入",
+            "desc": "正式评分达到 D 级，当前客户价值偏弱，不宜过早投入过多精力。",
+            "suggestion": "保持基础联系，等待预算、采购方式或需求成熟后再加大推进力度。",
+        },
+        "E": {
+            "label": "A卡 · 暂不优先",
+            "desc": "正式评分达到 E 级，当前客户价值有限，暂不建议作为重点对象推进。",
+            "suggestion": "保留基础触达即可，将资源优先分配给更高确定性的客户。",
+        },
+    },
+    "B": {
+        "A": {
+            "label": "B卡 · 高转合同商机",
+            "desc": "评分达到 A 级，商机已具备较强的转合同确定性，适合集中资源推进签约。",
+            "suggestion": "并行推进商务谈判、合同条款确认和决策链锁定，尽快收敛到签约动作。",
+        },
+        "B": {
+            "label": "B卡 · 重点推进商机",
+            "desc": "评分达到 B 级，商机基础较好，仍有明确成交机会，适合继续高频推进。",
+            "suggestion": "补强预算确认、关键人认同和竞争策略，推动项目进入更明确的签约阶段。",
+        },
+        "C": {
+            "label": "B卡 · 需继续验证",
+            "desc": "评分达到 C 级，商机存在推进基础，但转合同关键条件还不够稳固。",
+            "suggestion": "优先核实预算、POC结果和内部评审状态，避免过早投入过重交付资源。",
+        },
+        "D": {
+            "label": "B卡 · 谨慎跟进",
+            "desc": "评分达到 D 级，当前商机离合同转化仍有明显差距，需要谨慎评估投入产出。",
+            "suggestion": "控制推进成本，重点确认需求清晰度、关键人支持度和内部可行性是否会改善。",
+        },
+    },
 }
 
-B_SUGGESTIONS = {
-    "A": "高价值商机。建议立即推进方案、商务和决策链确认，尽快锁定下一步动作。",
-    "B": "较好商机。建议一周内组织演示或POC，推动客户完成内部决策。",
-    "C": "中等商机。建议继续澄清痛点、预算和时间表，避免过早投入大量资源。",
-    "D": "较弱商机。建议控制投入，重点确认预算和真实采购意愿。",
-    "E": "当前阶段不具备明显机会。建议先观察，不作为重点项目推进。",
-}
-
-INDUSTRY_SCORES = {
-    "金融": 5,
-    "保险": 5,
-    "物流": 4,
-    "通信": 5,
-    "零售": 4,
-    "制造": 4,
-    "政务": 5,
-    "其他": 3,
-}
+SOURCE_MANUAL = "manual"
+SOURCE_AI = "ai"
+SOURCE_NONE = "none"
 
 
-def evaluate_card(card_type: str, text: str = "", industry: str | None = None, amount: float | None = None) -> Dict:
-    normalized_text = (text or "").lower()
+def empty_dimensions(card_type: str = "A") -> dict[str, str | None]:
+    return {field_name: None for field_name in get_scoring_field_keys(card_type)}
 
-    if card_type == "A":
-        scores = _evaluate_a_card(normalized_text, industry)
-        dims = A_CARD_DIMS
-        suggestions = A_SUGGESTIONS
-    elif card_type == "B":
-        scores = _evaluate_b_card(normalized_text, amount)
-        dims = B_CARD_DIMS
-        suggestions = B_SUGGESTIONS
-    else:
-        raise ValueError("不支持的卡片类型")
 
-    raw_score = sum(scores[item["key"]] for item in dims)
-    raw_max_score = sum(item["max_score"] for item in dims)
-    normalized_score = round(raw_score / raw_max_score * 100) if raw_max_score else 0
-    grade_info = _resolve_grade(normalized_score)
+def normalize_dimensions(
+    dimensions: Mapping[str, Any] | None,
+    *,
+    card_type: str = "A",
+) -> dict[str, str | None]:
+    if dimensions is None:
+        return empty_dimensions(card_type)
+    return normalize_scoring_dimensions(dimensions, card_type=card_type, allow_extra=False)
+
+
+def merge_dimensions(
+    ai_dimensions: Mapping[str, Any] | None,
+    manual_dimensions: Mapping[str, Any] | None,
+    *,
+    card_type: str = "A",
+) -> tuple[dict[str, str | None], dict[str, str]]:
+    normalized_card_type = normalize_card_type(card_type)
+    normalized_ai = normalize_dimensions(ai_dimensions, card_type=normalized_card_type)
+    normalized_manual = normalize_dimensions(manual_dimensions, card_type=normalized_card_type)
+    merged: dict[str, str | None] = {}
+    sources: dict[str, str] = {}
+
+    for field_name in get_scoring_field_keys(normalized_card_type):
+        manual_value = normalized_manual.get(field_name)
+        ai_value = normalized_ai.get(field_name)
+        if manual_value is not None:
+            merged[field_name] = manual_value
+            sources[field_name] = SOURCE_MANUAL
+        elif ai_value is not None:
+            merged[field_name] = ai_value
+            sources[field_name] = SOURCE_AI
+        else:
+            merged[field_name] = None
+            sources[field_name] = SOURCE_NONE
+
+    return merged, sources
+
+
+def evaluate_card(
+    card_type: str,
+    *,
+    ai_dimensions: Mapping[str, Any] | None = None,
+    manual_dimensions: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    normalized_card_type = normalize_card_type(card_type)
+    if normalized_card_type not in CARD_COPY:
+        raise ValueError("Unsupported card type")
+
+    normalized_ai = (
+        normalize_dimensions(ai_dimensions, card_type=normalized_card_type)
+        if ai_dimensions is not None
+        else None
+    )
+    normalized_manual = (
+        normalize_dimensions(manual_dimensions, card_type=normalized_card_type)
+        if manual_dimensions is not None
+        else None
+    )
+    merged_dimensions, sources = merge_dimensions(
+        normalized_ai,
+        normalized_manual,
+        card_type=normalized_card_type,
+    )
+    scoring = calculate_card_score(normalized_card_type, merged_dimensions)
+    copy = CARD_COPY[normalized_card_type][scoring.card_level]
+    field_map = get_scoring_fields(normalized_card_type)
+
+    dimensions: list[dict[str, Any]] = []
+    for field_name in get_scoring_field_keys(normalized_card_type):
+        field_meta = field_map[field_name]
+        detail = scoring.detail[field_name]
+        max_score = max(option_meta["score"] for option_meta in field_meta["options"].values())
+        dimensions.append(
+            {
+                "key": field_name,
+                "name": field_meta["label"],
+                "score": detail["score"],
+                "max_score": max_score,
+                "selected_value": detail["value"],
+                "selected_label": detail["value_label"],
+                "source": sources[field_name],
+            }
+        )
 
     return {
-        "card_type": card_type,
-        "normalized_score": normalized_score,
-        "raw_score": raw_score,
-        "raw_max_score": raw_max_score,
-        "grade": grade_info["grade"],
-        "grade_label": grade_info["label"],
-        "rating_desc": grade_info["desc"],
-        "suggestion": suggestions[grade_info["grade"]],
-        "dimensions": [
-            {
-                "key": item["key"],
-                "name": item["name"],
-                "score": scores[item["key"]],
-                "max_score": item["max_score"],
-            }
-            for item in dims
-        ],
+        "card_type": normalized_card_type,
+        "normalized_score": scoring.total_score,
+        "raw_score": scoring.total_score,
+        "raw_max_score": get_max_score(normalized_card_type),
+        "grade": scoring.card_level,
+        "grade_label": copy["label"],
+        "rating_desc": copy["desc"],
+        "suggestion": copy["suggestion"],
+        "ai_dimensions": normalized_ai,
+        "manual_dimensions": normalized_manual,
+        "merged_dimensions": merged_dimensions,
+        "dimensions": dimensions,
     }
-
-
-def _evaluate_a_card(text: str, industry: str | None) -> Dict[str, int]:
-    industry_value = (industry or "").strip()
-    scores = {
-        "industry": _score_industry(text, industry_value),
-        "rank": _score_rank(text),
-        "scenario": _score_scenario(text),
-        "budget": _score_a_budget(text),
-        "labor": _score_labor(text),
-        "leadership": _score_leadership(text),
-        "bid": _score_bid(text),
-        "headcount": _score_headcount(text),
-        "region": _score_region(text),
-    }
-    return scores
-
-
-def _evaluate_b_card(text: str, amount: float | None) -> Dict[str, int]:
-    scores = {
-        "match": _score_match(text),
-        "budget_clear": _score_b_budget(text, amount),
-        "decision": _score_decision(text),
-        "competition": _score_competition(text),
-        "feasibility": _score_feasibility(text),
-        "intent": _score_intent(text),
-        "timeline": _score_timeline(text),
-        "history": _score_history(text),
-    }
-    return scores
-
-
-def _resolve_grade(normalized_score: int) -> Dict[str, str | int]:
-    for item in GRADES:
-        if normalized_score >= item["min_score"]:
-            return item
-    return GRADES[-1]
-
-
-def _score_industry(text: str, industry: str) -> int:
-    if industry:
-        return INDUSTRY_SCORES.get(industry, 3)
-    if _contains_any(text, ["金融", "银行", "证券"]):
-        return 5
-    if "保险" in text:
-        return 5
-    if _contains_any(text, ["物流", "快递", "供应链"]):
-        return 4
-    if _contains_any(text, ["通信", "运营商", "电信", "移动", "联通"]):
-        return 5
-    if _contains_any(text, ["零售", "电商", "门店", "商超"]):
-        return 4
-    if _contains_any(text, ["制造", "工厂", "产线"]):
-        return 4
-    if _contains_any(text, ["政务", "政府", "公共服务"]):
-        return 5
-    return 3
-
-
-def _score_rank(text: str) -> int:
-    if _contains_any(text, ["top3", "top 3", "前三"]):
-        return 5
-    if "前十" in text or "top10" in text or "top 10" in text:
-        return 4
-    if re.search(r"\b11\s*-\s*20\b", text):
-        return 3
-    if re.search(r"\b20\s*-\s*30\b", text):
-        return 2
-    if "30后" in text or "三十名后" in text:
-        return 1
-    return 3
-
-
-def _score_scenario(text: str) -> int:
-    if _contains_any(text, ["智能回访", "回访", "金融催收", "催收", "智能质检", "质检"]):
-        return 10
-    if _contains_any(text, ["语音客服", "客服", "外呼", "营销", "人机协同"]):
-        return 8
-    return 6
-
-
-def _score_a_budget(text: str) -> int:
-    budget_value = _extract_wan_budget(text)
-    if budget_value >= 300:
-        return 5
-    if budget_value >= 200:
-        return 4
-    if budget_value >= 100:
-        return 3
-    if budget_value >= 50:
-        return 2
-    if budget_value > 0:
-        return 1
-    return 2
-
-
-def _score_labor(text: str) -> int:
-    number = _extract_people_number(text)
-    if number >= 6000:
-        return 5
-    if number >= 5000:
-        return 4
-    if number >= 4000:
-        return 3
-    return 3
-
-
-def _score_leadership(text: str) -> int:
-    has_business = _contains_any(text, ["业务", "运营", "客服负责人"])
-    has_tech = _contains_any(text, ["技术", "cto", "cio", "it", "信息化"])
-    if has_business and has_tech:
-        return 5
-    if has_business:
-        return 3
-    if has_tech:
-        return 1
-    return 3
-
-
-def _score_bid(text: str) -> int:
-    if _contains_any(text, ["单一来源", "单一采购"]):
-        return 5
-    if _contains_any(text, ["邀标", "邀请招标"]):
-        return 4
-    if "公开招标" in text:
-        return 2
-    if _contains_any(text, ["竞标", "比选", "招投标"]):
-        return 3
-    return 3
-
-
-def _score_headcount(text: str) -> int:
-    number = _extract_people_number(text)
-    if number >= 500:
-        return 5
-    if number >= 300:
-        return 4
-    if number >= 100:
-        return 3
-    return 3
-
-
-def _score_region(text: str) -> int:
-    if _contains_any(text, ["北京", "上海", "广州", "深圳", "一线城市"]):
-        return 10
-    if _contains_any(text, ["省会", "杭州", "南京", "武汉", "成都", "西安", "长沙", "苏州"]):
-        return 6
-    return 4
-
-
-def _score_match(text: str) -> int:
-    if _contains_any(text, ["高度匹配", "完全匹配"]):
-        return 15
-    if "匹配" in text:
-        return 12
-    if _contains_any(text, ["一般", "还行", "可尝试"]):
-        return 8
-    if _contains_any(text, ["不匹配", "偏弱", "较差"]):
-        return 4
-    return 8
-
-
-def _score_b_budget(text: str, amount: float | None) -> int:
-    if amount is not None:
-        if amount >= 100:
-            return 10
-        if amount >= 50:
-            return 7
-        return 5
-    if _contains_any(text, ["预算明确", "预算已批", "资金落实"]):
-        return 10
-    if "预算" in text:
-        return 7
-    return 5
-
-
-def _score_decision(text: str) -> int:
-    if _contains_any(text, ["决策链清晰", "决策人明确", "拍板人明确"]):
-        return 10
-    if _contains_any(text, ["老板", "总经理", "总监", "cto", "cio"]):
-        return 8
-    return 6
-
-
-def _score_competition(text: str) -> int:
-    if _contains_any(text, ["优势明显", "竞争力强"]):
-        return 10
-    if "略有优势" in text:
-        return 7
-    if _contains_any(text, ["均势", "势均力敌", "竞品"]):
-        return 5
-    if _contains_any(text, ["劣势", "处于下风"]):
-        return 2
-    return 7
-
-
-def _score_feasibility(text: str) -> int:
-    if _contains_any(text, ["可行", "可以做", "落地没问题"]):
-        return 10
-    if "较可行" in text:
-        return 7
-    if _contains_any(text, ["有难度", "实施难"]):
-        return 4
-    if _contains_any(text, ["很难", "不可行"]):
-        return 2
-    return 7
-
-
-def _score_intent(text: str) -> int:
-    if "强烈" in text:
-        return 15
-    if _contains_any(text, ["较强", "意向明确", "积极推进"]):
-        return 12
-    if _contains_any(text, ["一般", "考虑中", "还在看"]):
-        return 6
-    if _contains_any(text, ["较弱", "兴趣不大"]):
-        return 3
-    if _contains_any(text, ["无意向", "没有意向"]):
-        return 1
-    return 8
-
-
-def _score_timeline(text: str) -> int:
-    if _contains_any(text, ["紧急", "尽快", "加急", "本月上线"]):
-        return 10
-    if _contains_any(text, ["较急", "季度内上线"]):
-        return 7
-    if _contains_any(text, ["不急", "慢慢来"]):
-        return 3
-    if "一般" in text:
-        return 5
-    return 6
-
-
-def _score_history(text: str) -> int:
-    if _contains_any(text, ["多次合作", "老客户", "续约"]):
-        return 10
-    if _contains_any(text, ["一次合作", "合作过一次"]):
-        return 7
-    if _contains_any(text, ["接触过", "有过沟通"]):
-        return 4
-    if _contains_any(text, ["全新客户", "首次接触"]):
-        return 5
-    return 5
-
-
-def _contains_any(text: str, keywords: List[str]) -> bool:
-    return any(keyword in text for keyword in keywords)
-
-
-def _extract_wan_budget(text: str) -> float:
-    patterns: List[Tuple[str, float]] = [
-        (r"(\d+(?:\.\d+)?)\s*万", 1),
-        (r"(\d+(?:\.\d+)?)\s*w\b", 1),
-        (r"(\d+(?:\.\d+)?)\s*万元", 1),
-        (r"(\d+(?:\.\d+)?)\s*元", 0.0001),
-    ]
-    for pattern, multiplier in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return float(match.group(1)) * multiplier
-    return 0
-
-
-def _extract_people_number(text: str) -> int:
-    patterns = [
-        r"(\d+)\s*人",
-        r"(\d+)\s*席",
-        r"(\d+)\s*名",
-        r"(\d+)\s*坐席",
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return int(match.group(1))
-    return 0

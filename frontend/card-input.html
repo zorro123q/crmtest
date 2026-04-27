@@ -2,1135 +2,1652 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>SalesPilot · 商机价值评估</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>价值评估 - SalesPilot CRM</title>
 <style>
 :root{
-  --primary:#0EA5E9; --primary-dark:#0284C7; --primary-light:#E0F2FE;
-  --accent:#8B5CF6; --success:#10B981; --warning:#F59E0B; --danger:#EF4444;
-  --bg:#F1F5F9; --surface:#fff; --border:#E2E8F0;
-  --text:#1E293B; --text2:#64748B; --text3:#94A3B8;
-  --radius:16px; --safe-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f3f6fb;
+  --surface:#ffffff;
+  --surface-soft:#f8fbff;
+  --line:#d8e1ef;
+  --line-strong:#b7c7de;
+  --text:#1d2a3b;
+  --text-soft:#617287;
+  --primary:#0f62fe;
+  --primary-soft:#eaf1ff;
+  --accent:#0ea5e9;
+  --success:#0f9f6e;
+  --warning:#c67a00;
+  --danger:#cf3348;
+  --shadow:0 14px 40px rgba(20,42,74,.10);
+  --radius:22px;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--text)}
-body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;min-height:100vh;position:relative}
 
-/* 顶栏 */
-.header{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);padding:16px 20px 20px;padding-top:calc(16px + env(safe-area-inset-top,0px));color:#fff;flex-shrink:0}
-.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.header-back{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:none;color:#fff}
-.header-title{font-size:18px;font-weight:700}
-.header-link{font-size:12px;color:rgba(255,255,255,.8);text-decoration:none;background:rgba(255,255,255,.15);padding:5px 12px;border-radius:20px}
-.header-tabs{display:flex;gap:8px;margin-top:16px}
-.tab-btn{flex:1;padding:10px 16px;background:rgba(255,255,255,.15);border:none;border-radius:10px;color:rgba(255,255,255,.8);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
-.tab-btn.active{background:#fff;color:var(--primary);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
 
-/* 主体 */
-.scroll-body{flex:1;overflow-y:auto;padding:16px;padding-bottom:calc(100px + var(--safe-bottom));-webkit-overflow-scrolling:touch}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(15,98,254,.10), transparent 28%),
+    radial-gradient(circle at top right, rgba(14,165,233,.14), transparent 24%),
+    linear-gradient(180deg, #f7fbff 0%, #eef3fa 100%);
+}
 
-/* 卡片 */
-.card{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:14px}
-.card-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-.card-title .icon{width:24px;height:24px;background:linear-gradient(135deg,#0EA5E9,#8B5CF6);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.page-shell{
+  max-width:1200px;
+  margin:0 auto;
+  padding:28px 20px 40px;
+}
 
-/* 录音区 */
-.record-area{display:flex;flex-direction:column;align-items:center;padding:20px 0 16px}
-.record-main-btn{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#EF4444,#DC2626);border:none;color:#fff;font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(239,68,68,.4);transition:all .2s;position:relative;flex-shrink:0}
-.record-main-btn.idle{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);box-shadow:0 6px 20px rgba(14,165,233,.4)}
-.record-main-btn.recording{animation:recPulse 1.2s ease-in-out infinite}
-@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 16px rgba(239,68,68,0)}}
-.record-hint{font-size:13px;color:var(--text2);margin-top:12px;font-weight:500}
-.record-timer{font-size:20px;font-weight:800;color:var(--danger);margin-top:6px;font-variant-numeric:tabular-nums;min-height:28px}
+.hero{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:20px;
+  padding:26px 28px;
+  border-radius:28px;
+  background:linear-gradient(135deg, #123a7b 0%, #0f62fe 56%, #0ea5e9 100%);
+  color:#fff;
+  box-shadow:0 24px 50px rgba(15,98,254,.20);
+}
 
-/* 波形 */
-.waveform{display:flex;align-items:center;gap:3px;height:32px;margin-top:8px}
-.waveform-bar{width:4px;background:var(--danger);border-radius:2px;animation:wave 1s ease-in-out infinite}
-.waveform-bar:nth-child(1){animation-delay:0s;height:8px}
-.waveform-bar:nth-child(2){animation-delay:.15s;height:16px}
-.waveform-bar:nth-child(3){animation-delay:.3s;height:24px}
-.waveform-bar:nth-child(4){animation-delay:.15s;height:16px}
-.waveform-bar:nth-child(5){animation-delay:0s;height:8px}
-@keyframes wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(2.5)}}
-.waveform.hidden{visibility:hidden}
+.hero h1{
+  font-size:30px;
+  font-weight:800;
+  letter-spacing:.02em;
+}
 
-/* 文本框 */
-.textarea{width:100%;border:1.5px solid var(--border);border-radius:12px;padding:14px;font-size:14px;line-height:1.7;min-height:100px;resize:none;font-family:inherit;color:var(--text);outline:none;transition:border-color .15s;background:#FAFBFC}
-.textarea:focus{border-color:var(--primary);background:#fff;box-shadow:0 0 0 3px rgba(14,165,233,.1)}
+.hero p{
+  margin-top:10px;
+  max-width:720px;
+  font-size:14px;
+  line-height:1.8;
+  color:rgba(255,255,255,.85);
+}
 
-/* 按钮 */
-.btn{display:flex;align-items:center;justify-content:center;gap:7px;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .15s;width:100%}
-.btn-primary{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);color:#fff;box-shadow:0 4px 14px rgba(14,165,233,.35)}
-.btn-primary:active{transform:scale(.97)}
-.btn-secondary{background:var(--bg);color:var(--text2);border:1.5px solid var(--border)}
-.btn-secondary:active{background:#e2e8f0}
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.hero-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
 
-/* 评分结果 */
-.score-card{background:linear-gradient(135deg,#0EA5E9,#8B5CF6);border-radius:var(--radius);padding:24px;text-align:center;color:#fff;margin-bottom:16px}
-.score-value{font-size:56px;font-weight:800;line-height:1}
-.score-label{font-size:14px;opacity:.85;margin-top:4px}
-.score-grade{display:inline-block;margin-top:12px;padding:6px 20px;background:rgba(255,255,255,.2);border-radius:20px;font-size:16px;font-weight:700}
-.score-grade.A{background:#10B981}.score-grade.B{background:#3B82F6}.score-grade.C{background:#F59E0B}.score-grade.D{background:#EF4444}.score-grade.E{background:#6B7280}
+.hero-link,
+.hero-back{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:108px;
+  height:42px;
+  padding:0 16px;
+  border-radius:999px;
+  text-decoration:none;
+  font-size:13px;
+  font-weight:700;
+  border:1px solid rgba(255,255,255,.24);
+  color:#fff;
+  background:rgba(255,255,255,.12);
+  backdrop-filter:blur(14px);
+}
 
-/* 评分明细 */
-.dimension-list{display:flex;flex-direction:column;gap:8px}
-.dimension-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg);border-radius:10px}
-.dimension-name{font-size:13px;font-weight:600;color:var(--text)}
-.dimension-score{display:flex;align-items:center;gap:8px}
-.dimension-val{font-size:14px;font-weight:700;color:var(--primary)}
-.dimension-bar{width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
-.dimension-fill{height:100%;background:linear-gradient(90deg,#0EA5E9,#8B5CF6);border-radius:3px}
+.hero-back{
+  cursor:pointer;
+}
 
-/* 评级说明 */
-.rating-desc{background:var(--bg);border-radius:12px;padding:14px;margin-top:8px}
-.rating-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
-.rating-item{font-size:12px;color:var(--text2);line-height:1.6;padding:4px 0}
+.tab-bar{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+  margin-bottom:18px;
+}
 
-/* 建议 */
-.suggestion-box{background:#FEF3C7;border-radius:12px;padding:14px;margin-top:12px;border-left:4px solid var(--warning)}
-.suggestion-title{font-size:13px;font-weight:700;color:#92400E;margin-bottom:6px}
-.suggestion-text{font-size:13px;color:#B45309;line-height:1.6}
+.tab-btn{
+  border:none;
+  border-radius:18px;
+  padding:16px 18px;
+  text-align:left;
+  background:rgba(255,255,255,.78);
+  color:var(--text-soft);
+  box-shadow:var(--shadow);
+  cursor:pointer;
+  transition:.18s ease;
+}
 
-/* 底部操作 */
-.bottom-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:12px 16px;padding-bottom:calc(12px + var(--safe-bottom));z-index:100}
-.bottom-bar .btn{margin-bottom:8px}
-.bottom-bar .btn:last-child{margin-bottom:0}
+.tab-btn strong{
+  display:block;
+  color:var(--text);
+  font-size:16px;
+  font-weight:800;
+}
 
-/* Loading */
-.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.9);backdrop-filter:blur(4px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:16px}
-.loading-spinner{width:48px;height:48px;border:4px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:14px;font-weight:600;color:var(--text2)}
+.tab-btn span{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  line-height:1.6;
+}
 
-/* Toast */
-.toast{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%) translateY(-20px);background:#1E293B;color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:300;opacity:0;transition:all .3s;white-space:nowrap;max-width:90vw;text-align:center}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.tab-btn.active{
+  background:linear-gradient(135deg, rgba(15,98,254,.10), rgba(14,165,233,.10));
+  outline:2px solid rgba(15,98,254,.18);
+  color:var(--primary);
+  transform:translateY(-1px);
+}
 
-/* 客户信息输入 */
-.form-group{margin-bottom:14px}
-.form-label{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block}
-.form-input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;background:#FAFBFC}
-.form-input:focus{border-color:var(--primary);background:#fff}
-.form-select{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;background:#FAFBFC;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.card-view{
+  display:none;
+}
 
-/* 隐藏/显示 */
-.hidden{display:none !important}
+.card-view.active{
+  display:block;
+}
+
+.view-grid{
+  display:grid;
+  gap:18px;
+}
+
+.panel{
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(216,225,239,.9);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.panel-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding:20px 22px 16px;
+  border-bottom:1px solid rgba(216,225,239,.75);
+}
+
+.panel-title{
+  font-size:18px;
+  font-weight:800;
+}
+
+.panel-subtitle{
+  margin-top:6px;
+  color:var(--text-soft);
+  font-size:13px;
+  line-height:1.7;
+}
+
+.panel-body{
+  padding:20px 22px 22px;
+}
+
+.grid-2{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px 16px;
+}
+
+.grid-3{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px 16px;
+}
+
+.form-group{
+  margin-bottom:14px;
+}
+
+.form-label{
+  display:block;
+  margin-bottom:8px;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text-soft);
+}
+
+.form-input,
+.form-select,
+.form-textarea{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:#fff;
+  color:var(--text);
+  font-size:14px;
+  transition:.18s ease;
+}
+
+.form-input,
+.form-select{
+  min-height:46px;
+  padding:0 14px;
+}
+
+.form-textarea{
+  min-height:138px;
+  resize:vertical;
+  padding:14px;
+  line-height:1.7;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus{
+  outline:none;
+  border-color:#7fa9ff;
+  box-shadow:0 0 0 4px rgba(15,98,254,.10);
+}
+
+.input-note{
+  margin-top:7px;
+  font-size:12px;
+  color:var(--text-soft);
+  line-height:1.6;
+}
+
+.record-layout{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:16px;
+  align-items:flex-start;
+  margin-bottom:16px;
+}
+
+.record-box{
+  width:168px;
+  padding:18px 16px;
+  border-radius:20px;
+  background:linear-gradient(180deg, #f7fbff 0%, #eff5ff 100%);
+  border:1px solid var(--line);
+}
+
+.record-btn{
+  width:100%;
+  min-height:50px;
+  border:none;
+  border-radius:999px;
+  background:linear-gradient(135deg, #0f62fe, #0ea5e9);
+  color:#fff;
+  font-size:14px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 12px 28px rgba(15,98,254,.22);
+}
+
+.record-btn.recording{
+  background:linear-gradient(135deg, #cf3348, #ff6b6b);
+}
+
+.record-status{
+  margin-top:12px;
+  font-size:12px;
+  line-height:1.7;
+  color:var(--text-soft);
+}
+
+.record-status strong{
+  display:block;
+  color:var(--text);
+  font-size:18px;
+  margin-top:4px;
+  font-variant-numeric:tabular-nums;
+}
+
+.button-row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  padding:0 16px;
+  border:none;
+  border-radius:14px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:800;
+  transition:.18s ease;
+}
+
+.btn-primary{
+  color:#fff;
+  background:linear-gradient(135deg, #0f62fe, #0ea5e9);
+  box-shadow:0 14px 30px rgba(15,98,254,.18);
+}
+
+.btn-secondary{
+  color:var(--text);
+  background:#fff;
+  border:1px solid var(--line);
+}
+
+.btn-ghost{
+  color:var(--primary);
+  background:var(--primary-soft);
+  border:1px solid rgba(15,98,254,.12);
+}
+
+.hint-banner{
+  margin-bottom:16px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(15,98,254,.10);
+  background:linear-gradient(135deg, rgba(15,98,254,.05), rgba(14,165,233,.05));
+  color:var(--text-soft);
+  font-size:13px;
+  line-height:1.7;
+}
+
+.status-text{
+  font-size:13px;
+  color:var(--text-soft);
+  line-height:1.7;
+}
+
+.status-text.stale{
+  color:var(--warning);
+}
+
+.status-text.ready{
+  color:var(--success);
+}
+
+.mode-switch{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.mode-btn{
+  border:none;
+  border-radius:999px;
+  min-height:40px;
+  padding:0 14px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:800;
+  color:var(--text-soft);
+  background:#edf2fb;
+}
+
+.mode-btn.active{
+  color:#fff;
+  background:linear-gradient(135deg, #0f62fe, #0ea5e9);
+  box-shadow:0 12px 26px rgba(15,98,254,.18);
+}
+
+.field-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px 16px;
+}
+
+.field-card{
+  padding:14px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:var(--surface-soft);
+}
+
+.field-card .form-group{
+  margin-bottom:0;
+}
+
+.field-card .form-label{
+  color:var(--text);
+}
+
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:640px;
+}
+
+th,
+td{
+  padding:13px 14px;
+  border-bottom:1px solid #e9eef7;
+  text-align:left;
+  font-size:13px;
+  vertical-align:middle;
+}
+
+th{
+  background:#f7faff;
+  color:var(--text-soft);
+  font-size:12px;
+  font-weight:800;
+}
+
+tbody tr:last-child td{
+  border-bottom:none;
+}
+
+.tag{
+  display:inline-flex;
+  align-items:center;
+  min-height:26px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+
+.tag-ai{
+  background:#e6f7ff;
+  color:#0369a1;
+}
+
+.tag-manual{
+  background:#ecfdf5;
+  color:#047857;
+}
+
+.tag-none{
+  background:#f1f5f9;
+  color:#64748b;
+}
+
+.summary-grid{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px;
+  margin-bottom:16px;
+}
+
+.summary-card{
+  padding:18px 16px;
+  border-radius:20px;
+  background:linear-gradient(180deg, #fff 0%, #f7fbff 100%);
+  border:1px solid var(--line);
+}
+
+.summary-label{
+  color:var(--text-soft);
+  font-size:12px;
+  font-weight:700;
+}
+
+.summary-value{
+  margin-top:10px;
+  font-size:30px;
+  font-weight:800;
+  line-height:1;
+}
+
+.summary-grade{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:52px;
+  height:42px;
+  margin-top:10px;
+  border-radius:14px;
+  background:linear-gradient(135deg, #0f62fe, #0ea5e9);
+  color:#fff;
+  font-size:22px;
+  font-weight:800;
+}
+
+.note-box{
+  padding:16px 18px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:#fff;
+  margin-bottom:14px;
+}
+
+.note-box strong{
+  display:block;
+  margin-bottom:8px;
+  font-size:14px;
+}
+
+.note-box p{
+  color:var(--text-soft);
+  font-size:13px;
+  line-height:1.8;
+}
+
+.empty-state{
+  padding:24px 18px;
+  border-radius:18px;
+  border:1px dashed var(--line-strong);
+  background:#fbfdff;
+  color:var(--text-soft);
+  text-align:center;
+  font-size:13px;
+  line-height:1.8;
+}
+
+.loading{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(246,250,255,.72);
+  backdrop-filter:blur(6px);
+  z-index:30;
+}
+
+.loading.show{
+  display:flex;
+}
+
+.loading-card{
+  min-width:240px;
+  padding:24px 26px;
+  border-radius:24px;
+  background:#fff;
+  box-shadow:0 26px 60px rgba(21,46,83,.18);
+  text-align:center;
+}
+
+.spinner{
+  width:42px;
+  height:42px;
+  margin:0 auto 14px;
+  border:4px solid #dbe7ff;
+  border-top-color:#0f62fe;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+}
+
+@keyframes spin{
+  to{
+    transform:rotate(360deg);
+  }
+}
+
+.toast{
+  position:fixed;
+  left:50%;
+  bottom:26px;
+  transform:translateX(-50%) translateY(18px);
+  min-width:220px;
+  max-width:calc(100% - 28px);
+  padding:12px 16px;
+  border-radius:999px;
+  background:#162538;
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  text-align:center;
+  opacity:0;
+  transition:.2s ease;
+  z-index:35;
+}
+
+.toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(0);
+}
+
+@media (max-width: 920px){
+  .grid-2,
+  .grid-3,
+  .field-grid,
+  .summary-grid{
+    grid-template-columns:1fr;
+  }
+
+  .record-layout{
+    grid-template-columns:1fr;
+  }
+
+  .hero{
+    flex-direction:column;
+  }
+}
+
+@media (max-width: 640px){
+  .page-shell{
+    padding:18px 12px 28px;
+  }
+
+  .hero{
+    padding:20px 18px;
+    border-radius:24px;
+  }
+
+  .hero h1{
+    font-size:24px;
+  }
+
+  .panel-head,
+  .panel-body{
+    padding-left:16px;
+    padding-right:16px;
+  }
+
+  .tab-bar{
+    grid-template-columns:1fr;
+  }
+}
 </style>
 </head>
 <body>
+<div class="page-shell">
+  <section class="hero">
+    <div>
+      <h1>统一价值评估</h1>
+      <p>A卡继续沿用现有正式评分维度，B卡切换为独立的商机转合同评价模型，支持 AI 分析、手动录入分析，以及 AI + 手动合并分析。</p>
+    </div>
+    <div class="hero-actions">
+      <button type="button" class="hero-back" id="backBtn">返回首页</button>
+      <a class="hero-link" href="crm-system.html">桌面入口</a>
+    </div>
+  </section>
 
-<!-- 顶栏 -->
-<div class="header">
-  <div class="header-top">
-    <button class="header-back" onclick="location.href='index.html'">←</button>
-    <div class="header-title">🎯 商机价值评估</div>
-    <a href="crm-system.html" class="header-link">桌面版 →</a>
-  </div>
-  <div class="header-tabs">
-    <button class="tab-btn active" data-tab="a-card" onclick="switchTab('a-card')">A卡 · 客户意向</button>
-    <button class="tab-btn" data-tab="b-card" onclick="switchTab('b-card')">B卡 · 商机评估</button>
+  <section class="tab-bar">
+    <button type="button" class="tab-btn active" data-tab-target="a-card-view">
+      <strong>A卡 · 客户意向</strong>
+      <span>判断客户意向、价值与跟进优先级，正式评分由系统统一规则计算。</span>
+    </button>
+    <button type="button" class="tab-btn" data-tab-target="b-card-view">
+      <strong>B卡 · 商机评估</strong>
+      <span>判断商机质量、推进优先级与商务动作建议，B卡使用独立的商机转合同 11 维度模型。</span>
+    </button>
+  </section>
+
+  <section class="card-view active" id="a-card-view">
+    <div class="view-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">1. 客户基础信息区</div>
+            <div class="panel-subtitle">以下字段仅作上下文和兼容信息，不直接进入正式评分计算。</div>
+          </div>
+        </div>
+        <div class="panel-body grid-2">
+          <div class="form-group">
+            <label class="form-label" for="a-company">客户名称</label>
+            <input class="form-input" id="a-company" placeholder="例如：某保险集团">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="a-industry-context">行业备注（兼容字段）</label>
+            <input class="form-input" id="a-industry-context" placeholder="仅作上下文，不参与正式打分">
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">2. AI分析区</div>
+            <div class="panel-subtitle">可录音转写或直接编辑文本。点击"AI识别评价维度"后，只更新 AI 识别结果，不直接展示最终评分。</div>
+          </div>
+          <div class="status-text" id="a-ai-status">No reusable AI cache is available.</div>
+        </div>
+        <div class="panel-body">
+          <div class="record-layout">
+            <div class="record-box">
+              <button type="button" class="record-btn" data-record-key="a">Start Recording</button>
+              <div class="record-status">
+                Recording
+                <strong id="a-record-timer">00:00</strong>
+                <span id="a-record-hint">Click to start recording. Click again to stop and transcribe.</span>
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label class="form-label" for="a-text">AI分析文本</label>
+                <textarea class="form-textarea" id="a-text" placeholder="可粘贴会议纪要、跟进记录、转写结果，或直接描述客户情况。"></textarea>
+                <div class="input-note">Text edits invalidate the cached AI dimensions immediately.</div>
+              </div>
+              <div class="button-row">
+                <button type="button" class="btn btn-primary" data-ai-identify="a">AI识别评价维度</button>
+                <button type="button" class="btn btn-secondary" data-clear-text="a">清空文本</button>
+              </div>
+            </div>
+          </div>
+          <div class="hint-banner">AI output is restricted to the official scoring enum values only.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>维度</th>
+                  <th>AI识别值</th>
+                  <th>分数</th>
+                </tr>
+              </thead>
+              <tbody id="a-ai-preview-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">3. 手动录入分析区</div>
+            <div class="panel-subtitle">所有下拉项都来自正式评分字段。混合模式下，手动值优先覆盖 AI 结果。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field-grid" id="a-manual-fields"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">4. 结果展示区</div>
+            <div class="panel-subtitle">选择模式后开始评估，结果区会展示总分、卡级、评级说明、跟进建议和维度来源。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label class="form-label">评估模式</label>
+            <div class="mode-switch">
+              <button type="button" class="mode-btn" data-card-key="a" data-mode="ai">仅AI分析</button>
+              <button type="button" class="mode-btn" data-card-key="a" data-mode="manual">仅手动录入</button>
+              <button type="button" class="mode-btn active" data-card-key="a" data-mode="hybrid">AI + 手动合并分析</button>
+            </div>
+          </div>
+          <div class="button-row" style="margin-bottom:16px;">
+            <button type="button" class="btn btn-primary" data-evaluate-key="a">开始评估</button>
+            <button type="button" class="btn btn-ghost" data-reset-key="a">清空A卡内容</button>
+          </div>
+          <div id="a-result-zone" class="empty-state">No evaluation result yet. Add text or manual dimensions and run an evaluation.</div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="card-view" id="b-card-view">
+    <div class="view-grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">1. 商机基础信息区</div>
+            <div class="panel-subtitle">以下字段作为上下文和兼容信息保留，不直接参与正式评分计算。</div>
+          </div>
+        </div>
+        <div class="panel-body grid-3">
+          <div class="form-group">
+            <label class="form-label" for="b-company">客户名称</label>
+            <input class="form-input" id="b-company" placeholder="例如：某大型零售集团">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="b-opportunity">商机名称</label>
+            <input class="form-input" id="b-opportunity" placeholder="例如：智能外呼扩容项目">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="b-amount">预计金额（万元）</label>
+            <input class="form-input" id="b-amount" type="number" min="0" placeholder="例如：280">
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">2. AI分析区</div>
+            <div class="panel-subtitle">录音转写、文本编辑和 AI 正式维度识别都在这里完成，结果按文本一致性缓存。</div>
+          </div>
+          <div class="status-text" id="b-ai-status">No reusable AI cache is available.</div>
+        </div>
+        <div class="panel-body">
+          <div class="record-layout">
+            <div class="record-box">
+              <button type="button" class="record-btn" data-record-key="b">Start Recording</button>
+              <div class="record-status">
+                Recording
+                <strong id="b-record-timer">00:00</strong>
+                <span id="b-record-hint">Click to start recording. Click again to stop and transcribe.</span>
+              </div>
+            </div>
+            <div>
+              <div class="form-group">
+                <label class="form-label" for="b-text">AI分析文本</label>
+                <textarea class="form-textarea" id="b-text" placeholder="可粘贴商机纪要、客户反馈、招采信息、方案沟通记录等。"></textarea>
+                <div class="input-note">Text edits invalidate the cached AI dimensions immediately.</div>
+              </div>
+              <div class="button-row">
+                <button type="button" class="btn btn-primary" data-ai-identify="b">AI识别评价维度</button>
+                <button type="button" class="btn btn-secondary" data-clear-text="b">清空文本</button>
+              </div>
+            </div>
+          </div>
+          <div class="hint-banner">AI output is restricted to the official scoring enum values only.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>维度</th>
+                  <th>AI识别值</th>
+                  <th>分数</th>
+                </tr>
+              </thead>
+              <tbody id="b-ai-preview-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">3. 手动录入分析区</div>
+            <div class="panel-subtitle">正式评分字段动态渲染，下拉显示 label 与分数，提交时只发送 option value。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="field-grid" id="b-manual-fields"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">4. 结果展示区</div>
+            <div class="panel-subtitle">B卡保留商机推进视角的说明文案，评分规则改为独立的商机转合同评价模型。</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="form-group">
+            <label class="form-label">评估模式</label>
+            <div class="mode-switch">
+              <button type="button" class="mode-btn" data-card-key="b" data-mode="ai">仅AI分析</button>
+              <button type="button" class="mode-btn" data-card-key="b" data-mode="manual">仅手动录入</button>
+              <button type="button" class="mode-btn active" data-card-key="b" data-mode="hybrid">AI + 手动合并分析</button>
+            </div>
+          </div>
+          <div class="button-row" style="margin-bottom:16px;">
+            <button type="button" class="btn btn-primary" data-evaluate-key="b">开始评估</button>
+            <button type="button" class="btn btn-ghost" data-reset-key="b">清空B卡内容</button>
+          </div>
+          <div id="b-result-zone" class="empty-state">No evaluation result yet. Add text or manual dimensions and run an evaluation.</div>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>
+
+<div class="loading" id="loading">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <div id="loadingText">Working...</div>
   </div>
 </div>
 
-<!-- 主体 -->
-<div class="scroll-body">
-
-  <!-- A卡评分 -->
-  <div id="a-card-view">
-    <!-- 客户信息 -->
-    <div class="card">
-      <div class="card-title"><span class="icon">🏢</span>客户基本信息</div>
-      <div class="form-group">
-        <label class="form-label">客户名称</label>
-        <input type="text" class="form-input" id="a-company" placeholder="请输入客户公司名称">
-      </div>
-      <div class="form-group">
-        <label class="form-label">客户行业</label>
-        <select class="form-select" id="a-industry">
-          <option value="">请选择行业</option>
-          <option value="金融">金融（银行、保险、证券）</option>
-          <option value="物流">物流（快递、物流运输）</option>
-          <option value="零售">零售（电商、连锁商超）</option>
-          <option value="制造">制造业</option>
-          <option value="通信">通信运营商</option>
-          <option value="政务">政务服务</option>
-          <option value="其他">其他</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- 录音区 -->
-    <div class="card">
-      <div class="card-title"><span class="icon">🎤</span>语音描述客户情况</div>
-      <div class="record-area">
-        <button class="record-main-btn idle" id="recordBtn" onclick="toggleRecord()">
-          <span id="recordIcon">🎤</span>
-        </button>
-        <div class="record-hint" id="recordHint">点击开始录音</div>
-        <div class="record-timer" id="recordTimer"></div>
-        <div class="waveform hidden" id="waveform">
-          <div class="waveform-bar"></div><div class="waveform-bar"></div><div class="waveform-bar"></div>
-          <div class="waveform-bar"></div><div class="waveform-bar"></div>
-        </div>
-      </div>
-      <textarea class="textarea" id="a-text" placeholder="或直接在此输入客户情况描述，AI将自动提取评分维度信息..."></textarea>
-    </div>
-
-    <!-- 手动评分维度 -->
-    <div class="card">
-      <div class="card-title"><span class="icon">📊</span>快速评分（如已知晓）</div>
-      <div class="dimension-list">
-        <div class="dimension-item">
-          <span class="dimension-name">客户行业</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-industry">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">行业排名</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-rank">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">客户场景</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-scenario">-</span>/10
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">客户预算</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-budget">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">人力成本</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-labor">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">项目推动领导分管</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-leadership">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">招标形式</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-bid">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">客服人数</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-headcount">-</span>/5
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">客户所在区域</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-region">-</span>/10
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 评估按钮 -->
-    <button class="btn btn-primary" onclick="evaluateA()">✨ 评估客户意向</button>
-  </div>
-
-  <!-- B卡评分 -->
-  <div id="b-card-view" class="hidden">
-    <!-- 商机信息 -->
-    <div class="card">
-      <div class="card-title"><span class="icon">💼</span>商机基本信息</div>
-      <div class="form-group">
-        <label class="form-label">客户名称</label>
-        <input type="text" class="form-input" id="b-company" placeholder="请输入客户公司名称">
-      </div>
-      <div class="form-group">
-        <label class="form-label">商机名称</label>
-        <input type="text" class="form-input" id="b-opportunity" placeholder="请输入商机名称">
-      </div>
-      <div class="form-group">
-        <label class="form-label">预估金额（万元）</label>
-        <input type="number" class="form-input" id="b-amount" placeholder="请输入预估合同金额">
-      </div>
-    </div>
-
-    <!-- 录音区 -->
-    <div class="card">
-      <div class="card-title"><span class="icon">🎤</span>语音描述商机情况</div>
-      <div class="record-area">
-        <button class="record-main-btn idle" id="recordBtnB" onclick="toggleRecordB()">
-          <span id="recordIconB">🎤</span>
-        </button>
-        <div class="record-hint" id="recordHintB">点击开始录音</div>
-        <div class="record-timer" id="recordTimerB"></div>
-        <div class="waveform hidden" id="waveformB">
-          <div class="waveform-bar"></div><div class="waveform-bar"></div><div class="waveform-bar"></div>
-          <div class="waveform-bar"></div><div class="waveform-bar"></div>
-        </div>
-      </div>
-      <textarea class="textarea" id="b-text" placeholder="或直接在此输入商机情况描述，AI将自动提取评分维度信息..."></textarea>
-    </div>
-
-    <!-- 手动评分维度 -->
-    <div class="card">
-      <div class="card-title"><span class="icon">📊</span>快速评分（如已知晓）</div>
-      <div class="dimension-list">
-        <div class="dimension-item">
-          <span class="dimension-name">客户需求匹配度</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-match">-</span>/15
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">预算明确性</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-budgetClear">-</span>/10
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">决策链清晰度</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-decision">-</span>/10
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">竞争分析</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-competition">-</span>/10
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">方案可行性</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-feasibility">-</span>/10
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">客户合作意向</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-intent">-</span>/15
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">项目时间紧迫性</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-timeline">-</span>/10
-          </div>
-        </div>
-        <div class="dimension-item">
-          <span class="dimension-name">历史合作记录</span>
-          <div class="dimension-score">
-            <span class="dimension-val" id="score-history">-</span>/10
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 评估按钮 -->
-    <button class="btn btn-primary" onclick="evaluateB()">✨ 评估商机价值</button>
-  </div>
-
-  <!-- 评估结果 -->
-  <div id="result-view" class="hidden">
-    <div class="score-card">
-      <div class="score-value" id="totalScore">0</div>
-      <div class="score-label">综合评分</div>
-      <div class="score-grade" id="scoreGrade">E</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><span class="icon">📋</span>评分明细</div>
-      <div class="dimension-list" id="result-dimensions"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title"><span class="icon">💡</span>评级说明</div>
-      <div class="rating-desc">
-        <div class="rating-item" id="ratingDesc"></div>
-      </div>
-      <div class="suggestion-box" id="suggestionBox">
-        <div class="suggestion-title">📌 跟进建议</div>
-        <div class="suggestion-text" id="suggestionText"></div>
-      </div>
-    </div>
-
-    <button class="btn btn-secondary" onclick="resetForm()">🔄 重新评估</button>
-  </div>
-
-</div>
-
-<!-- Loading -->
-<div class="loading-overlay hidden" id="loading">
-  <div class="loading-spinner"></div>
-  <div class="loading-text">AI 评估中...</div>
-</div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<script type="text/plain" id="legacy-card-input-script">
-// A卡评分维度配置
-const A_CARD_DIMS = {
-  industry: {name:'客户行业', max:5, weights:{'金融':5,'保险':5,'物流':4,'通信':5,'零售':4,'制造':4,'政务':5,'其他':3}},
-  rank: {name:'行业排名', max:5, weights:{'TOP3':5,'前十':4,'11-20':3,'20-30':2,'30后':1,'未知':2}},
-  scenario: {name:'客户场景', max:10, weights:{'智能回访':10,'金融催收':10,'语音客服':8,'外呼营销':8,'智能质检':10,'人机协同':8,'其他':5}},
-  budget: {name:'客户预算', max:5, weights:{'300万以上':5,'200-300万':4,'100-200万':3,'50-100万':2,'50万以下':1,'未知':2}},
-  labor: {name:'人力成本', max:5, weights:{'6000以上':5,'5000-6000':4,'4000-5000':3,'4000以下':2,'未知':3}},
-  leadership: {name:'项目推动领导分管', max:5, weights:{'分管技术与业务':5,'分管业务':3,'分管技术':1,'仅业务':3,'未知':2}},
-  bid: {name:'招标形式', max:5, weights:{'单一来源':5,'邀标可控':4,'公开招标':2,'竞标':3,'未知':3}},
-  headcount: {name:'客服人数', max:5, weights:{'500以上':5,'300-500':4,'100-300':3,'100以下':2,'未知':3}},
-  region: {name:'客户所在区域', max:10, weights:{'一线城市':10,'省会':6,'二三线':4,'其他':2,'未知':3}}
-};
-
-// B卡评分维度配置（商机到合同P2C）
-const B_CARD_DIMS = {
-  match: {name:'客户需求匹配度', max:15, weights:{'高度匹配':15,'匹配':12,'一般':8,'较差':4}},
-  budgetClear: {name:'预算明确性', max:10, weights:{'明确':10,'较明确':7,'不明确':3,'待定':5}},
-  decision: {name:'决策链清晰度', max:10, weights:{'清晰':10,'较清晰':7,'不清晰':3,'未知':4}},
-  competition: {name:'竞争分析', max:10, weights:{'优势明显':10,'略有优势':7,'均势':5,'劣势':2}},
-  feasibility: {name:'方案可行性', max:10, weights:{'可行':10,'较可行':7,'有难度':4,'难':2}},
-  intent: {name:'客户合作意向', max:15, weights:{'强烈':15,'较强':12,'一般':6,'较弱':3,'无':1}},
-  timeline: {name:'项目时间紧迫性', max:10, weights:{'紧急':10,'较急':7,'一般':5,'不急':3}},
-  history: {name:'历史合作记录', max:10, weights:{'多次合作':10,'一次合作':7,'有接触':4,'全新客户':5}}
-};
-
-// 评级配置
-const GRADES = {
-  A:{min:70, label:'A级 - 重点跟进', desc:'70分以上，值得重点跟进，建议每周联系1-2次', color:'#10B981'},
-  B:{min:60, label:'B级 - 值得跟进', desc:'60-70分，值得现场跟进，建议每月联系1-2次', color:'#3B82F6'},
-  C:{min:40, label:'C级 - 保持联系', desc:'40-60分，先电话会议跟进，建议每月至少1次', color:'#F59E0B'},
-  D:{min:20, label:'D级 - 维持联系', desc:'20-40分，保持联系，跟进周期每2月至少1次', color:'#EF4444'},
-  E:{min:0, label:'E级 - 无价值', desc:'20分以下，无价值，保持基本联系即可', color:'#6B7280'}
-};
-
-let currentTab = 'a-card';
-let mediaRecorder = null;
-let audioChunks = [];
-let recordingTimer = null;
-let recordingSeconds = 0;
-
-// Tab切换
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tab);
-  });
-  document.getElementById('a-card-view').classList.toggle('hidden', tab !== 'a-card');
-  document.getElementById('b-card-view').classList.toggle('hidden', tab !== 'b-card');
-  document.getElementById('result-view').classList.add('hidden');
-}
-
-// 录音功能
-let isRecording = false;
-
-function toggleRecord() {
-  if (isRecording) {
-    stopRecord();
-  } else {
-    startRecord('a-text', 'recordBtn', 'recordIcon', 'recordHint', 'recordTimer', 'waveform');
-  }
-}
-
-function toggleRecordB() {
-  if (isRecording) {
-    stopRecord();
-  } else {
-    startRecord('b-text', 'recordBtnB', 'recordIconB', 'recordHintB', 'recordTimerB', 'waveformB');
-  }
-}
-
-async function startRecord(textAreaId, btnId, iconId, hintId, timerId, waveId) {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = async () => {
-      const audioBlob = new Blob(audioChunks, {type:'audio/webm'});
-      const textArea = document.getElementById(textAreaId);
-      textArea.value += '\n[语音录入中...]';
-      
-      // 模拟语音转文字（实际接入已切换到 paraformer-v2）
-      showToast('语音已录制，请补充描述或点击评估');
-    };
-
-    mediaRecorder.start();
-    isRecording = true;
-    
-    document.getElementById(btnId).classList.remove('idle');
-    document.getElementById(btnId).classList.add('recording');
-    document.getElementById(iconId).innerHTML = '⏹';
-    document.getElementById(hintId).innerText = '录音中...';
-    document.getElementById(waveId).classList.remove('hidden');
-    
-    recordingSeconds = 0;
-    recordingTimer = setInterval(() => {
-      recordingSeconds++;
-      const mins = Math.floor(recordingSeconds / 60).toString().padStart(2,'0');
-      const secs = (recordingSeconds % 60).toString().padStart(2,'0');
-      document.getElementById(timerId).innerText = `${mins}:${secs}`;
-    }, 1000);
-    
-  } catch(e) {
-    showToast('无法访问麦克风，请检查权限');
-  }
-}
-
-function stopRecord() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
-    mediaRecorder.stream.getTracks().forEach(track => track.stop());
-  }
-  isRecording = false;
-  
-  document.querySelectorAll('.record-main-btn').forEach(btn => {
-    btn.classList.remove('recording');
-    btn.classList.add('idle');
-  });
-  document.getElementById('recordIcon').innerHTML = '🎤';
-  document.getElementById('recordIconB').innerHTML = '🎤';
-  document.getElementById('recordHint').innerText = '点击开始录音';
-  document.getElementById('recordHintB').innerText = '点击开始录音';
-  document.getElementById('waveform').classList.add('hidden');
-  document.getElementById('waveformB').classList.add('hidden');
-  
-  if (recordingTimer) {
-    clearInterval(recordingTimer);
-    recordingTimer = null;
-  }
-  document.getElementById('recordTimer').innerText = '';
-  document.getElementById('recordTimerB').innerText = '';
-}
-
-// A卡评估
-function evaluateA() {
-  const company = document.getElementById('a-company').value.trim();
-  const industry = document.getElementById('a-industry').value;
-  const text = document.getElementById('a-text').value;
-  
-  if (!company && !text) {
-    showToast('请输入客户名称或描述');
-    return;
-  }
-
-  showLoading();
-  
-  // 模拟AI分析（实际需要接入GPT-4）
-  setTimeout(() => {
-    const scores = analyzeAText(text, industry);
-    displayResult(scores, 'A');
-    hideLoading();
-  }, 1500);
-}
-
-// B卡评估
-function evaluateB() {
-  const company = document.getElementById('b-company').value.trim();
-  const amount = document.getElementById('b-amount').value;
-  const text = document.getElementById('b-text').value;
-  
-  if (!company && !text) {
-    showToast('请输入商机名称或描述');
-    return;
-  }
-
-  showLoading();
-  
-  // 模拟AI分析
-  setTimeout(() => {
-    const scores = analyzeBText(text, amount);
-    displayResult(scores, 'B');
-    hideLoading();
-  }, 1500);
-}
-
-// 分析A卡文本（模拟AI提取）
-function analyzeAText(text, industry) {
-  const scores = {};
-  const lowerText = text.toLowerCase();
-  
-  // 行业评分
-  scores.industry = industry ? (A_CARD_DIMS.industry.weights[industry] || 3) : 
-    (lowerText.includes('金融') ? 5 : lowerText.includes('保险') ? 5 : 
-     lowerText.includes('物流') ? 4 : lowerText.includes('制造') ? 4 : 3);
-  
-  // 行业排名
-  scores.rank = lowerText.includes('top3') || lowerText.includes('前三') ? 5 :
-    lowerText.includes('前十') ? 4 : lowerText.includes('11-20') ? 3 : 3;
-  
-  // 客户场景
-  scores.scenario = lowerText.includes('智能回访') || lowerText.includes('回访') ? 10 :
-    lowerText.includes('催收') ? 10 : lowerText.includes('外呼') ? 8 :
-    lowerText.includes('质检') ? 10 : lowerText.includes('客服') ? 8 : 6;
-  
-  // 预算
-  scores.budget = lowerText.includes('300万') || lowerText.includes('300w') ? 5 :
-    lowerText.includes('200万') || lowerText.includes('200w') ? 4 :
-    lowerText.includes('100万') || lowerText.includes('100w') ? 3 : 2;
-  
-  // 人力成本
-  scores.labor = lowerText.includes('6000') ? 5 : lowerText.includes('5000') ? 4 :
-    lowerText.includes('4000') ? 3 : 3;
-  
-  // 领导分管
-  scores.leadership = lowerText.includes('分管业务') && lowerText.includes('技术') ? 5 :
-    lowerText.includes('分管业务') ? 3 : lowerText.includes('分管技术') ? 1 : 3;
-  
-  // 招标形式
-  scores.bid = lowerText.includes('单一来源') ? 5 : lowerText.includes('邀标') ? 4 :
-    lowerText.includes('公开招标') ? 2 : 3;
-  
-  // 客服人数
-  scores.headcount = lowerText.includes('500') || lowerText.includes('500人') ? 5 :
-    lowerText.includes('300') ? 4 : lowerText.includes('100') ? 3 : 3;
-  
-  // 区域
-  scores.region = lowerText.includes('北京') || lowerText.includes('上海') || 
-    lowerText.includes('广州') || lowerText.includes('深圳') || lowerText.includes('一线') ? 10 :
-    lowerText.includes('省会') ? 6 : 4;
-    
-  return scores;
-}
-
-// 分析B卡文本
-function analyzeBText(text, amount) {
-  const scores = {};
-  const lowerText = text.toLowerCase();
-  
-  // 需求匹配度
-  scores.match = lowerText.includes('高度匹配') || lowerText.includes('完全匹配') ? 15 :
-    lowerText.includes('匹配') ? 12 : lowerText.includes('一般') ? 8 : 8;
-  
-  // 预算明确性
-  if (amount) {
-    scores.budgetClear = parseInt(amount) >= 100 ? 10 : parseInt(amount) >= 50 ? 7 : 5;
-  } else {
-    scores.budgetClear = lowerText.includes('预算明确') ? 10 : lowerText.includes('预算') ? 7 : 5;
-  }
-  
-  // 决策链
-  scores.decision = lowerText.includes('决策链清晰') || lowerText.includes('决策人明确') ? 10 :
-    lowerText.includes('老板') || lowerText.includes('总经理') ? 8 : 6;
-  
-  // 竞争分析
-  scores.competition = lowerText.includes('优势') || lowerText.includes('竞争力强') ? 10 :
-    lowerText.includes('竞品') ? 5 : 7;
-  
-  // 可行性
-  scores.feasibility = lowerText.includes('可行') || lowerText.includes('可以做') ? 10 :
-    lowerText.includes('难度') ? 4 : 7;
-  
-  // 意向
-  scores.intent = lowerText.includes('强烈') ? 15 : lowerText.includes('意向') ? 12 :
-    lowerText.includes('考虑') ? 6 : 8;
-  
-  // 时间紧迫性
-  scores.timeline = lowerText.includes('紧急') || lowerText.includes('急') || lowerText.includes('加急') ? 10 :
-    lowerText.includes('不急') || lowerText.includes('慢慢') ? 3 : 6;
-  
-  // 历史合作
-  scores.history = lowerText.includes('合作过') || lowerText.includes('老客户') ? 10 :
-    lowerText.includes('有接触') ? 4 : 5;
-    
-  return scores;
-}
-
-// 显示结果
-function displayResult(scores, cardType) {
-  const dims = cardType === 'A' ? A_CARD_DIMS : B_CARD_DIMS;
-  let total = 0;
-  let maxTotal = 0;
-  let html = '';
-  
-  for (const key in dims) {
-    const score = scores[key] || 0;
-    const max = dims[key].max;
-    total += score;
-    maxTotal += max;
-    const pct = (score / max) * 100;
-    
-    html += `<div class="dimension-item">
-      <span class="dimension-name">${dims[key].name}</span>
-      <div class="dimension-score">
-        <div class="dimension-bar"><div class="dimension-fill" style="width:${pct}%"></div></div>
-        <span class="dimension-val">${score}</span>/${max}
-      </div>
-    </div>`;
-  }
-  
-  document.getElementById('result-dimensions').innerHTML = html;
-  document.getElementById('totalScore').innerText = total;
-  
-  // 评级
-  let grade = 'E';
-  for (const g in GRADES) {
-    if (total >= GRADES[g].min) {
-      grade = g;
-      break;
-    }
-  }
-  
-  const gradeEl = document.getElementById('scoreGrade');
-  gradeEl.innerText = grade;
-  gradeEl.className = 'score-grade ' + grade;
-  
-  // 说明
-  document.getElementById('ratingDesc').innerText = GRADES[grade].desc;
-  document.getElementById('suggestionText').innerText = getSuggestion(grade, cardType);
-  
-  // 切换视图
-  document.getElementById('a-card-view').classList.add('hidden');
-  document.getElementById('b-card-view').classList.add('hidden');
-  document.getElementById('result-view').classList.remove('hidden');
-}
-
-function getSuggestion(grade, cardType) {
-  if (cardType === 'A') {
-    if (grade === 'A') return '⭐ 重点客户！建议本周内安排销售负责人现场拜访，明确需求和预算，争取月度内完成签约。';
-    if (grade === 'B') return '优质线索。建议2周内安排电话会议或线上演示，保持每周1次沟通节奏。';
-    if (grade === 'C') return '普通线索。建议每月保持1次电话沟通，了解客户动态，挖掘需求。';
-    if (grade === 'D') return '低优先级。每2月跟进1次即可，关注是否有重大变化。';
-    return '暂无价值。保持基本关注即可，无需投入过多资源。';
-  } else {
-    if (grade === 'A') return '高价值商机！建议立即启动签约流程，协调技术团队提前准备方案演示，缩短决策周期。';
-    if (grade === 'B') return '良好商机。建议2周内安排客户考察或POC演示，推进决策链明确。';
-    if (grade === 'C') return '一般商机。继续深入沟通，明确客户痛点和预算，挖掘增量需求。';
-    if (grade === 'D') return '较弱商机。保持关注但控制投入，了解客户实际采购计划。';
-    return '暂未形成有效商机。建议暂时搁置，后续持续观察。';
-  }
-}
-
-function resetForm() {
-  document.getElementById('a-company').value = '';
-  document.getElementById('a-industry').value = '';
-  document.getElementById('a-text').value = '';
-  document.getElementById('b-company').value = '';
-  document.getElementById('b-opportunity').value = '';
-  document.getElementById('b-amount').value = '';
-  document.getElementById('b-text').value = '';
-  
-  document.getElementById('result-view').classList.add('hidden');
-  document.getElementById('a-card-view').classList.remove('hidden');
-}
-
-function showLoading() {
-  document.getElementById('loading').classList.remove('hidden');
-}
-
-function hideLoading() {
-  document.getElementById('loading').classList.add('hidden');
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.innerText = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-</script>
+<script src="crm-common.js"></script>
 <script>
 (() => {
-  const CARD_INPUT_API_PATHS = {
-    evaluate: '/card-evaluations/evaluate',
-    transcribe: '/card-evaluations/transcribe'
+  const API = {
+    evaluate: "/api/card-evaluations/evaluate",
+    transcribe: "/api/card-evaluations/transcribe"
   };
 
-  const CARD_INPUT_PREVIEW_IDS = {
-    A: {
-      industry: 'score-industry',
-      rank: 'score-rank',
-      scenario: 'score-scenario',
-      budget: 'score-budget',
-      labor: 'score-labor',
-      leadership: 'score-leadership',
-      bid: 'score-bid',
-      headcount: 'score-headcount',
-      region: 'score-region'
+  /**
+   * B 卡后端已完整实现（11 维度独立评分模型、等级判定、评语文案全部就绪）。
+   * 前端 B_CARD_BACKEND_READY 设为 true，启用 B 卡 AI 识别与正式评估。
+   */
+  const B_CARD_BACKEND_READY = true;
+
+  const SOURCE_LABELS = {
+    ai: "AI",
+    manual: "手动",
+    none: "无"
+  };
+
+  const EMPTY_RESULT_HTML =
+    '<div class="empty-state">No evaluation result yet. Add text or manual dimensions and run an evaluation.</div>';
+
+  /**
+   * B卡新评价维度：商机转合同 11 维度模型
+   * 这里采用"固定枚举值 + 固定分值"的前端定义，方便后端后续对齐。
+   */
+  const B_CARD_SCORING_FIELDS = [
+    {
+      field: "customer_relationship",
+      label: "是否新老客户",
+      options: [
+        { value: "old_customer", label: "老客户", score: 10 },
+        { value: "new_customer_middle_or_above", label: "新客户（接触中层及以上）", score: 6 },
+        { value: "new_customer_other", label: "新客户（其他）", score: 2 }
+      ]
     },
-    B: {
-      match: 'score-match',
-      budget_clear: 'score-budgetClear',
-      decision: 'score-decision',
-      competition: 'score-competition',
-      feasibility: 'score-feasibility',
-      intent: 'score-intent',
-      timeline: 'score-timeline',
-      history: 'score-history'
+    {
+      field: "requirement_clarity",
+      label: "需求描述是否清晰",
+      options: [
+        { value: "clear", label: "清晰", score: 10 },
+        { value: "medium", label: "一般", score: 6 },
+        { value: "unclear", label: "不清晰", score: 2 }
+      ]
+    },
+    {
+      field: "budget_level",
+      label: "客户预算",
+      options: [
+        { value: "enough", label: "预算充足", score: 5 },
+        { value: "medium", label: "预算适中", score: 3 },
+        { value: "low", label: "预算不足", score: 1 }
+      ]
+    },
+    {
+      field: "deal_cycle",
+      label: "预估成交周期",
+      options: [
+        { value: "short", label: "1-3个月", score: 3 },
+        { value: "medium", label: "3-6个月", score: 1 },
+        { value: "long", label: "6个月以上", score: 0 }
+      ]
+    },
+    {
+      field: "opportunity_level",
+      label: "商机等级",
+      options: [
+        { value: "A", label: "A级", score: 2 },
+        { value: "B", label: "B级", score: 1.5 },
+        { value: "C", label: "C级", score: 1 },
+        { value: "D", label: "D级", score: 0.5 }
+      ]
+    },
+    {
+      field: "internal_review_status",
+      label: "是否经过内部立项评审",
+      options: [
+        { value: "passed", label: "已通过", score: 15 },
+        { value: "not_passed", label: "未通过", score: 5 }
+      ]
+    },
+    {
+      field: "poc_result",
+      label: "POC情况",
+      options: [
+        { value: "success", label: "POC成功", score: 15 },
+        { value: "partial_success", label: "POC部分成功", score: 8 },
+        { value: "failed", label: "POC失败", score: 2 }
+      ]
+    },
+    {
+      field: "key_person_acceptance",
+      label: "关键人是否对方案认同",
+      options: [
+        { value: "full", label: "完全认同", score: 10 },
+        { value: "partial", label: "部分认同", score: 6 },
+        { value: "none", label: "不认同", score: 2 }
+      ]
+    },
+    {
+      field: "initiator_department",
+      label: "项目发起部门",
+      options: [
+        { value: "core_business", label: "核心业务部门", score: 10 },
+        { value: "support", label: "支持部门", score: 6 },
+        { value: "edge", label: "边缘部门", score: 2 }
+      ]
+    },
+    {
+      field: "competition_status",
+      label: "是否有竞品",
+      options: [
+        { value: "no_competitor", label: "无竞品", score: 10 },
+        { value: "has_competitor_but_advantage", label: "有竞品但优势明显", score: 6 },
+        { value: "strong_competition", label: "有竞品且竞争激烈", score: 2 }
+      ]
+    },
+    {
+      field: "service_team_size",
+      label: "客服人数",
+      options: [
+        { value: "large", label: "百人以上", score: 10 },
+        { value: "medium", label: "50-100人", score: 6 },
+        { value: "small", label: "50人以下", score: 2 }
+      ]
     }
-  };
+  ];
 
-  const CARD_INPUT_RECORD_CONTEXTS = {
+  const CARD_CONFIG = {
     a: {
-      textAreaId: 'a-text',
-      btnId: 'recordBtn',
-      iconId: 'recordIcon',
-      hintId: 'recordHint',
-      timerId: 'recordTimer',
-      waveId: 'waveform'
+      cardType: "A",
+      viewId: "a-card-view",
+      companyId: "a-company",
+      industryId: "a-industry-context",
+      textId: "a-text",
+      manualContainerId: "a-manual-fields",
+      aiStatusId: "a-ai-status",
+      aiPreviewBodyId: "a-ai-preview-body",
+      resultZoneId: "a-result-zone",
+      recordTimerId: "a-record-timer",
+      recordHintId: "a-record-hint"
     },
     b: {
-      textAreaId: 'b-text',
-      btnId: 'recordBtnB',
-      iconId: 'recordIconB',
-      hintId: 'recordHintB',
-      timerId: 'recordTimerB',
-      waveId: 'waveformB'
+      cardType: "B",
+      viewId: "b-card-view",
+      companyId: "b-company",
+      opportunityId: "b-opportunity",
+      amountId: "b-amount",
+      textId: "b-text",
+      manualContainerId: "b-manual-fields",
+      aiStatusId: "b-ai-status",
+      aiPreviewBodyId: "b-ai-preview-body",
+      resultZoneId: "b-result-zone",
+      recordTimerId: "b-record-timer",
+      recordHintId: "b-record-hint"
     }
   };
 
-  let cardInputActiveRecorder = null;
-  const cardInputDefaultLoadingText = 'AI 评估中...';
+  const state = {
+    scoringFields: {
+      a: [],
+      b: [...B_CARD_SCORING_FIELDS]
+    },
+    cards: {
+      a: { mode: "hybrid", aiDimensions: null, aiSourceText: "" },
+      b: { mode: "hybrid", aiDimensions: null, aiSourceText: "" }
+    },
+    recorder: null
+  };
 
-  function updatePreviewScores(result) {
-    const idMap = CARD_INPUT_PREVIEW_IDS[result.card_type];
-    if (!idMap) {
+  function escapeHtml(value) {
+    return window.CRMApp && CRMApp.escapeHtml
+      ? CRMApp.escapeHtml(value)
+      : String(value ?? "");
+  }
+
+  function showLoading(message) {
+    document.getElementById("loadingText").textContent = message || "Working...";
+    document.getElementById("loading").classList.add("show");
+  }
+
+  function hideLoading() {
+    document.getElementById("loading").classList.remove("show");
+    document.getElementById("loadingText").textContent = "Working...";
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove("show"), 2400);
+  }
+
+  function getText(cardKey) {
+    return document.getElementById(CARD_CONFIG[cardKey].textId).value.trim();
+  }
+
+  function getScoringFields(cardKey) {
+    return state.scoringFields[cardKey] || [];
+  }
+
+  function getFieldMeta(cardKey, fieldName) {
+    return getScoringFields(cardKey).find((field) => field.field === fieldName) || null;
+  }
+
+  function getOptionMeta(cardKey, fieldName, optionValue) {
+    const field = getFieldMeta(cardKey, fieldName);
+    if (!field) return null;
+    return field.options.find((item) => item.value === optionValue) || null;
+  }
+
+  function hasAnyDimensionValue(values, cardKey) {
+    return getScoringFields(cardKey).some((field) => values[field.field]);
+  }
+
+  function collectManualDimensions(cardKey) {
+    const container = document.getElementById(CARD_CONFIG[cardKey].manualContainerId);
+    const values = {};
+    getScoringFields(cardKey).forEach((field) => {
+      const input = container.querySelector(`[data-score-field="${field.field}"]`);
+      values[field.field] = input && input.value ? input.value : null;
+    });
+    return values;
+  }
+
+  function renderManualFields(cardKey) {
+    const container = document.getElementById(CARD_CONFIG[cardKey].manualContainerId);
+    const fields = getScoringFields(cardKey);
+
+    if (!fields.length) {
+      container.innerHTML =
+        '<div class="empty-state">Formal scoring fields failed to load. Manual input is unavailable.</div>';
       return;
     }
-    result.dimensions.forEach((dimension) => {
-      const elementId = idMap[dimension.key];
-      if (elementId) {
-        document.getElementById(elementId).innerText = dimension.score;
-      }
-    });
+
+    container.innerHTML = fields.map((field) => `
+      <div class="field-card">
+        <div class="form-group">
+          <label class="form-label" for="${cardKey}-field-${escapeHtml(field.field)}">${escapeHtml(field.label)}</label>
+          <select
+            class="form-select"
+            id="${cardKey}-field-${escapeHtml(field.field)}"
+            data-score-field="${escapeHtml(field.field)}"
+          >
+            <option value="">Not selected</option>
+            ${field.options.map((option) => `
+              <option value="${escapeHtml(option.value)}">${escapeHtml(option.label)} (${option.score})</option>
+            `).join("")}
+          </select>
+        </div>
+      </div>
+    `).join("");
   }
 
-  function resetPreviewScores() {
-    Object.values(CARD_INPUT_PREVIEW_IDS).forEach((group) => {
-      Object.values(group).forEach((id) => {
-        document.getElementById(id).innerText = '-';
-      });
-    });
+  function formatScore(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return escapeHtml(value ?? "-");
+    }
+    return number % 1 === 0 ? String(number) : number.toFixed(1).replace(/\.0$/, "");
   }
 
-  function resetRecordUi(contextKey) {
-    const context = CARD_INPUT_RECORD_CONTEXTS[contextKey];
-    document.getElementById(context.btnId).classList.remove('recording');
-    document.getElementById(context.btnId).classList.add('idle');
-    document.getElementById(context.iconId).textContent = '🎤';
-    document.getElementById(context.hintId).innerText = '点击开始录音';
-    document.getElementById(context.waveId).classList.add('hidden');
-    document.getElementById(context.timerId).innerText = '';
-  }
+  function buildAiPreviewRowsFromPayload(cardKey, response) {
+    if (!response) return [];
 
-  async function apiRequest(path, options = {}) {
-    if (window.location.protocol === 'file:') {
-      throw new Error('请通过本地服务器或 Nginx 打开页面，不要直接双击 HTML 文件');
+    if (Array.isArray(response.dimensions) && response.dimensions.length) {
+      return response.dimensions
+        .filter((dimension) => dimension.source === "ai")
+        .map((dimension) => ({
+          name: dimension.name,
+          selected_label: dimension.selected_label || "Not identified",
+          score: dimension.score
+        }));
     }
 
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-    const devPorts = new Set(['3000', '5173', '5500', '5501', '8080']);
-    const apiUrl = devPorts.has(window.location.port)
-      ? `${window.location.protocol}//${window.location.hostname}:8000/api${normalizedPath}`
-      : `${window.location.origin}/api${normalizedPath}`;
+    if (response.ai_dimensions && typeof response.ai_dimensions === "object") {
+      return Object.entries(response.ai_dimensions)
+        .filter(([, value]) => value != null && value !== "")
+        .map(([fieldName, value]) => {
+          const fieldMeta = getFieldMeta(cardKey, fieldName);
+          const optionMeta = getOptionMeta(cardKey, fieldName, value);
+          return {
+            name: fieldMeta ? fieldMeta.label : fieldName,
+            selected_label: optionMeta ? optionMeta.label : value,
+            score: optionMeta ? optionMeta.score : "-"
+          };
+        });
+    }
 
-    const requestOptions = {
-      method: options.method || 'GET',
-      headers: {}
+    return [];
+  }
+
+  function renderAiPreview(cardKey, response) {
+    const tbody = document.getElementById(CARD_CONFIG[cardKey].aiPreviewBodyId);
+    const rows = buildAiPreviewRowsFromPayload(cardKey, response);
+
+    if (!rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="3"><div class="empty-state">No AI dimensions yet. Prepare text first, then run AI extraction.</div></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map((dimension) => `
+      <tr>
+        <td>${escapeHtml(dimension.name)}</td>
+        <td>${escapeHtml(dimension.selected_label || "Not identified")}</td>
+        <td>${formatScore(dimension.score)}</td>
+      </tr>
+    `).join("");
+  }
+
+  function buildSourceTag(source) {
+    const safeSource = source || "none";
+    return `<span class="tag tag-${safeSource}">${SOURCE_LABELS[safeSource] || safeSource}</span>`;
+  }
+
+  function renderResult(cardKey, response) {
+    const resultZone = document.getElementById(CARD_CONFIG[cardKey].resultZoneId);
+
+    resultZone.innerHTML = `
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Total Score</div>
+          <div class="summary-value">${formatScore(response.normalized_score)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Card Level</div>
+          <div class="summary-grade">${escapeHtml(response.grade)}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Rating Label</div>
+          <div class="summary-value" style="font-size:18px;line-height:1.4;">${escapeHtml(response.grade_label)}</div>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>Rating Description</strong>
+        <p>${escapeHtml(response.rating_desc || "-")}</p>
+      </div>
+
+      <div class="note-box">
+        <strong>Follow-up Suggestion</strong>
+        <p>${escapeHtml(response.suggestion || "-")}</p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Selected Value</th>
+              <th>Score</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(response.dimensions || []).map((dimension) => `
+              <tr>
+                <td>${escapeHtml(dimension.name)}</td>
+                <td>${escapeHtml(dimension.selected_label || "Not selected")}</td>
+                <td>${formatScore(dimension.score)} / ${formatScore(dimension.max_score)}</td>
+                <td>${buildSourceTag(dimension.source)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function updateAiStatus(cardKey, message, stale) {
+    const statusEl = document.getElementById(CARD_CONFIG[cardKey].aiStatusId);
+
+    if (message) {
+      statusEl.className = `status-text ${stale ? "stale" : "ready"}`;
+      statusEl.textContent = message;
+      return;
+    }
+
+    const cardState = state.cards[cardKey];
+    if (cardState.aiDimensions && getText(cardKey) === cardState.aiSourceText) {
+      statusEl.className = "status-text ready";
+      statusEl.textContent = "AI cache is valid and can be reused.";
+      return;
+    }
+
+    statusEl.className = "status-text";
+    statusEl.textContent = "No reusable AI cache is available.";
+  }
+
+  function clearAiCache(cardKey, message) {
+    state.cards[cardKey].aiDimensions = null;
+    state.cards[cardKey].aiSourceText = "";
+    renderAiPreview(cardKey, null);
+    updateAiStatus(cardKey, message || "", Boolean(message));
+  }
+
+  function resetManualFields(cardKey) {
+    const container = document.getElementById(CARD_CONFIG[cardKey].manualContainerId);
+    container.querySelectorAll("[data-score-field]").forEach((input) => {
+      input.value = "";
+    });
+  }
+
+  function setMode(cardKey, mode) {
+    state.cards[cardKey].mode = mode;
+    document.querySelectorAll(`.mode-btn[data-card-key="${cardKey}"]`).forEach((button) => {
+      button.classList.toggle("active", button.dataset.mode === mode);
+    });
+  }
+
+  function switchTab(cardKey) {
+    document.querySelectorAll(".tab-btn").forEach((button) => {
+      button.classList.toggle("active", button.dataset.tabTarget === CARD_CONFIG[cardKey].viewId);
+    });
+    document.querySelectorAll(".card-view").forEach((view) => {
+      view.classList.toggle("active", view.id === CARD_CONFIG[cardKey].viewId);
+    });
+  }
+
+  function buildPayload(cardKey, mode) {
+    const config = CARD_CONFIG[cardKey];
+    const payload = {
+      card_type: config.cardType,
+      analysis_mode: mode,
+      text: getText(cardKey),
+      company: document.getElementById(config.companyId).value.trim() || null,
+      industry: config.industryId
+        ? (document.getElementById(config.industryId).value.trim() || null)
+        : null,
+      opportunity_name: config.opportunityId
+        ? (document.getElementById(config.opportunityId).value.trim() || null)
+        : null,
+      amount: config.amountId && document.getElementById(config.amountId).value.trim()
+        ? Number(document.getElementById(config.amountId).value)
+        : null
     };
 
-    if (options.json) {
-      requestOptions.headers['Content-Type'] = 'application/json';
-      requestOptions.body = JSON.stringify(options.json);
-    } else if (options.body) {
-      requestOptions.body = options.body;
+    if (mode === "manual" || mode === "hybrid") {
+      payload.manual_dimensions = collectManualDimensions(cardKey);
     }
 
-    let response;
-    try {
-      response = await fetch(apiUrl, requestOptions);
-    } catch (error) {
-      throw new Error('无法连接后端，请确认服务已启动，并通过 HTTP 页面访问当前文件');
+    if (
+      (mode === "ai" || mode === "hybrid") &&
+      state.cards[cardKey].aiDimensions &&
+      payload.text === state.cards[cardKey].aiSourceText
+    ) {
+      payload.ai_dimensions = state.cards[cardKey].aiDimensions;
     }
 
-    if (!response.ok) {
-      let message = `请求失败 (${response.status})`;
-      try {
-        const errorData = await response.json();
-        if (typeof errorData.detail === 'string') {
-          message = errorData.detail;
-        }
-      } catch (error) {
-        message = `${message} ${response.statusText}`.trim();
-      }
-      throw new Error(message);
-    }
-
-    return response.json();
+    return payload;
   }
 
-  async function transcribeRecording(audioBlob, textAreaId) {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, `card-input-${Date.now()}.webm`);
-
-    window.showLoading('语音转写中...');
-    try {
-      const result = await apiRequest(CARD_INPUT_API_PATHS.transcribe, {
-        method: 'POST',
-        body: formData
-      });
-      const textArea = document.getElementById(textAreaId);
-      const existingText = textArea.value.trim();
-      textArea.value = existingText ? `${existingText}\n${result.text}` : result.text;
-      window.showToast('语音已转写到文本框');
-    } catch (error) {
-      window.showToast(error.message || '语音转写失败');
-    } finally {
-      window.hideLoading();
-    }
+  function guardBCardBackendAction(actionLabel) {
+    if (B_CARD_BACKEND_READY) return false;
+    showToast(`B卡新维度页面已切换，${actionLabel}需要等后端评分接口同步后再启用。`);
+    return true;
   }
 
-  async function startRecord(contextKey) {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      window.showToast('当前浏览器不支持录音');
+  async function identifyAiDimensions(cardKey) {
+    if (cardKey === "b" && guardBCardBackendAction("AI识别")) {
       return;
     }
 
-    const context = CARD_INPUT_RECORD_CONTEXTS[contextKey];
+    const config = CARD_CONFIG[cardKey];
+    const text = getText(cardKey);
 
+    if (!text) {
+      showToast("Enter or transcribe text before running AI extraction.");
+      return;
+    }
+
+    showLoading("Running AI extraction...");
+    try {
+      const response = await CRMApp.apiRequest(API.evaluate, {
+        method: "POST",
+        body: {
+          card_type: config.cardType,
+          analysis_mode: "ai",
+          text,
+          company: document.getElementById(config.companyId).value.trim() || null,
+          industry: config.industryId
+            ? (document.getElementById(config.industryId).value.trim() || null)
+            : null,
+          opportunity_name: config.opportunityId
+            ? (document.getElementById(config.opportunityId).value.trim() || null)
+            : null,
+          amount: config.amountId && document.getElementById(config.amountId).value.trim()
+            ? Number(document.getElementById(config.amountId).value)
+            : null
+        }
+      });
+
+      state.cards[cardKey].aiDimensions = response.ai_dimensions;
+      state.cards[cardKey].aiSourceText = text;
+      renderAiPreview(cardKey, response);
+      updateAiStatus(cardKey, "AI dimensions refreshed and cached for reuse.", false);
+      showToast("AI extraction completed.");
+    } catch (error) {
+      clearAiCache(cardKey);
+      showToast(error.message || "AI extraction failed.");
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function evaluateCard(cardKey) {
+    if (cardKey === "b" && guardBCardBackendAction("正式评估")) {
+      return;
+    }
+
+    const mode = state.cards[cardKey].mode;
+    const payload = buildPayload(cardKey, mode);
+    const manualValues = payload.manual_dimensions || {};
+
+    if (mode === "manual" && !hasAnyDimensionValue(manualValues, cardKey)) {
+      showToast("Manual mode requires at least one selected dimension.");
+      return;
+    }
+
+    if (mode === "ai" && !payload.text) {
+      showToast("AI mode requires non-empty text.");
+      return;
+    }
+
+    if (mode === "hybrid" && !payload.ai_dimensions && !payload.text) {
+      showToast("Hybrid mode needs text or a reusable AI cache.");
+      return;
+    }
+
+    showLoading("Building final evaluation...");
+    try {
+      const response = await CRMApp.apiRequest(API.evaluate, {
+        method: "POST",
+        body: payload
+      });
+      renderResult(cardKey, response);
+      showToast("Evaluation completed.");
+    } catch (error) {
+      showToast(error.message || "Evaluation failed.");
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function resetCard(cardKey) {
+    const config = CARD_CONFIG[cardKey];
+
+    document.getElementById(config.companyId).value = "";
+    if (config.industryId) document.getElementById(config.industryId).value = "";
+    if (config.opportunityId) document.getElementById(config.opportunityId).value = "";
+    if (config.amountId) document.getElementById(config.amountId).value = "";
+    document.getElementById(config.textId).value = "";
+
+    resetManualFields(cardKey);
+    clearAiCache(cardKey);
+    document.getElementById(config.resultZoneId).innerHTML = EMPTY_RESULT_HTML;
+    setMode(cardKey, "hybrid");
+  }
+
+  async function transcribeAudio(cardKey, audioBlob) {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, `card-evaluation-${Date.now()}.webm`);
+
+    showLoading("Transcribing audio...");
+    try {
+      const result = await CRMApp.apiRequest(API.transcribe, {
+        method: "POST",
+        body: formData
+      });
+      const textarea = document.getElementById(CARD_CONFIG[cardKey].textId);
+      textarea.value = textarea.value.trim()
+        ? `${textarea.value.trim()}\n${result.text}`
+        : result.text;
+      clearAiCache(cardKey, "Text changed. Run AI extraction again.");
+      showToast("Audio transcription completed.");
+    } catch (error) {
+      showToast(error.message || "Transcription failed.");
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function stopRecording() {
+    if (state.recorder) {
+      state.recorder.recorder.stop();
+    }
+  }
+
+  async function startRecording(cardKey) {
+    if (state.recorder) {
+      showToast("Stop the current recording first.");
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showToast("This browser does not support audio recording.");
+      return;
+    }
+
+    const config = CARD_CONFIG[cardKey];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       const chunks = [];
       let seconds = 0;
 
+      const button = document.querySelector(`[data-record-key="${cardKey}"]`);
+      const timerEl = document.getElementById(config.recordTimerId);
+      const hintEl = document.getElementById(config.recordHintId);
+
       recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunks.push(event.data);
-        }
+        if (event.data && event.data.size > 0) chunks.push(event.data);
       };
 
       recorder.onstop = async () => {
-        if (cardInputActiveRecorder && cardInputActiveRecorder.timer) {
-          clearInterval(cardInputActiveRecorder.timer);
-        }
-        resetRecordUi(contextKey);
+        clearInterval(state.recorder ? state.recorder.timer : null);
         stream.getTracks().forEach((track) => track.stop());
-        cardInputActiveRecorder = null;
 
-        const audioBlob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+        button.classList.remove("recording");
+        button.textContent = "Start Recording";
+        timerEl.textContent = "00:00";
+        hintEl.textContent = "Click to start recording. Click again to stop and transcribe.";
+        state.recorder = null;
+
+        const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
         if (audioBlob.size < 100) {
-          window.showToast('录音太短，请重试');
+          showToast("The recording is too short.");
           return;
         }
-        await transcribeRecording(audioBlob, context.textAreaId);
+
+        await transcribeAudio(cardKey, audioBlob);
       };
 
       recorder.start();
-      cardInputActiveRecorder = {
-        contextKey,
-        recorder,
-        timer: setInterval(() => {
-          seconds += 1;
-          const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-          const secs = (seconds % 60).toString().padStart(2, '0');
-          document.getElementById(context.timerId).innerText = `${mins}:${secs}`;
-        }, 1000)
-      };
+      button.classList.add("recording");
+      button.textContent = "Stop Recording";
+      hintEl.textContent = "Recording. Click again to stop and transcribe.";
 
-      document.getElementById(context.btnId).classList.remove('idle');
-      document.getElementById(context.btnId).classList.add('recording');
-      document.getElementById(context.iconId).textContent = '■';
-      document.getElementById(context.hintId).innerText = '录音中，点击结束';
-      document.getElementById(context.waveId).classList.remove('hidden');
-      document.getElementById(context.timerId).innerText = '00:00';
+      const timer = setInterval(() => {
+        seconds += 1;
+        timerEl.textContent =
+          `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+      }, 1000);
+
+      state.recorder = { cardKey, recorder, timer };
     } catch (error) {
-      window.showToast('无法访问麦克风，请检查权限');
+      showToast("Microphone access is unavailable.");
     }
   }
 
-  window.switchTab = function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.tab === tab);
+  async function loadScoringFields() {
+    showLoading("Loading formal scoring fields...");
+    try {
+      /**
+       * A卡：继续使用旧正式评分字段接口
+       * B卡：先使用页面内置的 11 维度
+       */
+      const aPayload = await CRMApp.getScoringOptions(true);
+      state.scoringFields.a = aPayload && Array.isArray(aPayload.fields) ? aPayload.fields : [];
+      state.scoringFields.b = [...B_CARD_SCORING_FIELDS];
+
+      renderManualFields("a");
+      renderManualFields("b");
+    } catch (error) {
+      state.scoringFields.a = [];
+      state.scoringFields.b = [...B_CARD_SCORING_FIELDS];
+
+      renderManualFields("a");
+      renderManualFields("b");
+      showToast(error.message || "Failed to load scoring fields.");
+    } finally {
+      hideLoading();
+    }
+  }
+
+  function bindEvents() {
+    document.getElementById("backBtn").addEventListener("click", () => {
+      window.location.href = "index.html";
     });
-    document.getElementById('a-card-view').classList.toggle('hidden', tab !== 'a-card');
-    document.getElementById('b-card-view').classList.toggle('hidden', tab !== 'b-card');
-    document.getElementById('result-view').classList.add('hidden');
-  };
 
-  window.toggleRecord = function toggleRecord() {
-    if (cardInputActiveRecorder && cardInputActiveRecorder.contextKey === 'a') {
-      cardInputActiveRecorder.recorder.stop();
-      return;
-    }
-    if (cardInputActiveRecorder) {
-      window.showToast('请先结束当前录音');
-      return;
-    }
-    startRecord('a');
-  };
+    document.querySelectorAll(".tab-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        switchTab(button.dataset.tabTarget === "a-card-view" ? "a" : "b");
+      });
+    });
 
-  window.toggleRecordB = function toggleRecordB() {
-    if (cardInputActiveRecorder && cardInputActiveRecorder.contextKey === 'b') {
-      cardInputActiveRecorder.recorder.stop();
-      return;
-    }
-    if (cardInputActiveRecorder) {
-      window.showToast('请先结束当前录音');
-      return;
-    }
-    startRecord('b');
-  };
+    document.querySelectorAll(".mode-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        setMode(button.dataset.cardKey, button.dataset.mode);
+      });
+    });
 
-  window.evaluateA = async function evaluateA() {
-    const company = document.getElementById('a-company').value.trim();
-    const industry = document.getElementById('a-industry').value;
-    const text = document.getElementById('a-text').value.trim();
+    document.querySelectorAll("[data-ai-identify]").forEach((button) => {
+      button.addEventListener("click", () => identifyAiDimensions(button.dataset.aiIdentify));
+    });
 
-    if (!company && !text) {
-      window.showToast('请输入客户名称或描述');
-      return;
-    }
+    document.querySelectorAll("[data-evaluate-key]").forEach((button) => {
+      button.addEventListener("click", () => evaluateCard(button.dataset.evaluateKey));
+    });
 
-    window.showLoading('AI 评估中...');
-    try {
-      const result = await apiRequest(CARD_INPUT_API_PATHS.evaluate, {
-        method: 'POST',
-        json: {
-          card_type: 'A',
-          company,
-          industry,
-          text
+    document.querySelectorAll("[data-reset-key]").forEach((button) => {
+      button.addEventListener("click", () => resetCard(button.dataset.resetKey));
+    });
+
+    document.querySelectorAll("[data-clear-text]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const cardKey = button.dataset.clearText;
+        document.getElementById(CARD_CONFIG[cardKey].textId).value = "";
+        clearAiCache(cardKey);
+      });
+    });
+
+    document.querySelectorAll("[data-record-key]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const cardKey = button.dataset.recordKey;
+        if (state.recorder && state.recorder.cardKey === cardKey) {
+          stopRecording();
+          return;
+        }
+        await startRecording(cardKey);
+      });
+    });
+
+    ["a", "b"].forEach((cardKey) => {
+      document.getElementById(CARD_CONFIG[cardKey].textId).addEventListener("input", () => {
+        if (
+          state.cards[cardKey].aiDimensions &&
+          getText(cardKey) !== state.cards[cardKey].aiSourceText
+        ) {
+          clearAiCache(cardKey, "Text changed. Run AI extraction again.");
+        } else if (!state.cards[cardKey].aiDimensions) {
+          updateAiStatus(cardKey);
         }
       });
-
-      updatePreviewScores(result);
-      document.getElementById('result-dimensions').innerHTML = result.dimensions.map((dimension) => {
-        const pct = dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0;
-        return `<div class="dimension-item">
-          <span class="dimension-name">${dimension.name}</span>
-          <div class="dimension-score">
-            <div class="dimension-bar"><div class="dimension-fill" style="width:${pct}%"></div></div>
-            <span class="dimension-val">${dimension.score}</span>/${dimension.max_score}
-          </div>
-        </div>`;
-      }).join('');
-
-      document.getElementById('totalScore').innerText = result.normalized_score;
-      const gradeEl = document.getElementById('scoreGrade');
-      gradeEl.innerText = result.grade;
-      gradeEl.className = `score-grade ${result.grade}`;
-      document.getElementById('ratingDesc').innerText = `${result.grade_label}。${result.rating_desc}`;
-      document.getElementById('suggestionText').innerText = result.suggestion;
-      document.getElementById('a-card-view').classList.add('hidden');
-      document.getElementById('b-card-view').classList.add('hidden');
-      document.getElementById('result-view').classList.remove('hidden');
-    } catch (error) {
-      window.showToast(error.message || '客户意向评估失败');
-    } finally {
-      window.hideLoading();
-    }
-  };
-
-  window.evaluateB = async function evaluateB() {
-    const company = document.getElementById('b-company').value.trim();
-    const opportunityName = document.getElementById('b-opportunity').value.trim();
-    const amountValue = document.getElementById('b-amount').value.trim();
-    const text = document.getElementById('b-text').value.trim();
-
-    if (!company && !opportunityName && !text) {
-      window.showToast('请输入客户名称、商机名称或描述');
-      return;
-    }
-
-    window.showLoading('AI 评估中...');
-    try {
-      const result = await apiRequest(CARD_INPUT_API_PATHS.evaluate, {
-        method: 'POST',
-        json: {
-          card_type: 'B',
-          company,
-          opportunity_name: opportunityName,
-          amount: amountValue ? Number(amountValue) : null,
-          text
-        }
-      });
-
-      updatePreviewScores(result);
-      document.getElementById('result-dimensions').innerHTML = result.dimensions.map((dimension) => {
-        const pct = dimension.max_score ? (dimension.score / dimension.max_score) * 100 : 0;
-        return `<div class="dimension-item">
-          <span class="dimension-name">${dimension.name}</span>
-          <div class="dimension-score">
-            <div class="dimension-bar"><div class="dimension-fill" style="width:${pct}%"></div></div>
-            <span class="dimension-val">${dimension.score}</span>/${dimension.max_score}
-          </div>
-        </div>`;
-      }).join('');
-
-      document.getElementById('totalScore').innerText = result.normalized_score;
-      const gradeEl = document.getElementById('scoreGrade');
-      gradeEl.innerText = result.grade;
-      gradeEl.className = `score-grade ${result.grade}`;
-      document.getElementById('ratingDesc').innerText = `${result.grade_label}。${result.rating_desc}`;
-      document.getElementById('suggestionText').innerText = result.suggestion;
-      document.getElementById('a-card-view').classList.add('hidden');
-      document.getElementById('b-card-view').classList.add('hidden');
-      document.getElementById('result-view').classList.remove('hidden');
-    } catch (error) {
-      window.showToast(error.message || '商机价值评估失败');
-    } finally {
-      window.hideLoading();
-    }
-  };
-
-  window.resetForm = function resetForm() {
-    document.getElementById('a-company').value = '';
-    document.getElementById('a-industry').value = '';
-    document.getElementById('a-text').value = '';
-    document.getElementById('b-company').value = '';
-    document.getElementById('b-opportunity').value = '';
-    document.getElementById('b-amount').value = '';
-    document.getElementById('b-text').value = '';
-    resetPreviewScores();
-    document.getElementById('result-view').classList.add('hidden');
-    window.switchTab('a-card');
-  };
-
-  window.showLoading = function showLoading(message) {
-    const loading = document.getElementById('loading');
-    const textEl = loading.querySelector('.loading-text');
-    textEl.innerText = message || cardInputDefaultLoadingText;
-    loading.classList.remove('hidden');
-  };
-
-  window.hideLoading = function hideLoading() {
-    const loading = document.getElementById('loading');
-    loading.querySelector('.loading-text').innerText = cardInputDefaultLoadingText;
-    loading.classList.add('hidden');
-  };
-
-  window.showToast = function showToast(message) {
-    const toast = document.getElementById('toast');
-    toast.innerText = message;
-    toast.classList.add('show');
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toast.classList.remove('show'), 2500);
-  };
-
-  // 检查用户权限
-  function checkPermission() {
-    var user = localStorage.getItem('crm_user');
-    if (!user) {
-      window.location.href = 'login.html';
-      return null;
-    }
-    return JSON.parse(user);
+    });
   }
 
-  // 页面加载时检查权限
-  document.addEventListener('DOMContentLoaded', function() {
-    checkPermission();
+  function init() {
+    const user = CRMApp.requireAuth();
+    if (!user) return;
+
+    bindEvents();
+    switchTab("a");
+    setMode("a", "hybrid");
+    setMode("b", "hybrid");
+    renderAiPreview("a", null);
+    renderAiPreview("b", null);
+    document.getElementById("a-result-zone").innerHTML = EMPTY_RESULT_HTML;
+    document.getElementById("b-result-zone").innerHTML = EMPTY_RESULT_HTML;
+    updateAiStatus("a");
+    updateAiStatus("b");
+    loadScoringFields();
   }
+
+  document.addEventListener("DOMContentLoaded", init);
 })();
 </script>
 </body>
