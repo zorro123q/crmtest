@@ -127,6 +127,10 @@ body{
   font-weight:700;
   cursor:pointer;
 }
+.btn:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
 .btn-primary{
   background:linear-gradient(135deg,var(--primary),#2563eb);
   color:#fff;
@@ -468,6 +472,9 @@ tbody tr:hover{
       <div class="toolbar">
         <input class="search" id="search-input" type="text" placeholder="搜索负责人、客户、产品、需求、项目类型">
         <button class="btn btn-ghost" id="refresh-btn">刷新</button>
+        <button class="btn btn-ghost" id="download-template-btn">下载导入模板</button>
+        <button class="btn btn-ghost" id="import-btn">导入数据</button>
+        <input id="import-file-input" type="file" accept=".xlsx,.csv" style="display:none">
         <button class="btn btn-primary" id="create-btn">新建商机</button>
         <div class="avatar" id="user-avatar">U</div>
       </div>
@@ -1306,6 +1313,64 @@ async function deleteOpportunity(id) {
   }
 }
 
+async function downloadImportTemplate() {
+  try {
+    var response = await fetch(CRMApp.getApiBase() + '/api/opportunities/import-template?format=xlsx', {
+      headers: {
+        Authorization: 'Bearer ' + CRMApp.getToken()
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('下载导入模板失败');
+    }
+
+    var blob = await response.blob();
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'opportunities_import_template.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    alert(error.message || '下载导入模板失败。');
+  }
+}
+
+function importSummary(result) {
+  var message = '导入完成：成功 ' + (result.created || 0) + ' 条，失败 ' + (result.failed || 0) + ' 条。';
+  if (result.errors && result.errors.length) {
+    message += '\n失败示例：' + result.errors.slice(0, 3).map(function(item) {
+      return '第 ' + item.row + ' 行：' + item.message;
+    }).join('；');
+  }
+  return message;
+}
+
+async function importOpportunityFile(file) {
+  var importButton = document.getElementById('import-btn');
+  var formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    importButton.disabled = true;
+    importButton.textContent = '导入中...';
+    var result = await CRMApp.apiRequest('/api/opportunities/import', {
+      method: 'POST',
+      body: formData
+    });
+    alert(importSummary(result || {}));
+    await loadOpportunities();
+  } catch (error) {
+    alert(error.message || '导入数据失败。');
+  } finally {
+    importButton.disabled = false;
+    importButton.textContent = '导入数据';
+  }
+}
+
 async function initPage() {
   if (!currentUser) return;
   setUserUI();
@@ -1314,6 +1379,17 @@ async function initPage() {
 
 document.getElementById('search-input').addEventListener('input', applyFilter);
 document.getElementById('refresh-btn').addEventListener('click', loadOpportunities);
+document.getElementById('download-template-btn').addEventListener('click', downloadImportTemplate);
+document.getElementById('import-btn').addEventListener('click', function() {
+  document.getElementById('import-file-input').click();
+});
+document.getElementById('import-file-input').addEventListener('change', function(event) {
+  var file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  if (file) {
+    importOpportunityFile(file);
+  }
+});
 document.getElementById('create-btn').addEventListener('click', openCreateModal);
 document.getElementById('modal-close-btn').addEventListener('click', closeModal);
 document.getElementById('cancel-btn').addEventListener('click', closeModal);

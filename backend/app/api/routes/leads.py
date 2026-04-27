@@ -6,10 +6,12 @@ Lead API routes.
 
 from __future__ import annotations
 
+import io
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -20,16 +22,19 @@ from app.models import Lead, User
 from app.schemas import LeadCreate, LeadOut, LeadUpdate, MessageResponse, PaginatedResponse
 from app.services.crm_rules_service import normalize_lead_status, status_to_active
 from app.services.scoring_service import SCORING_FIELD_KEYS, calculate_card_score
+from app.services.table_import_service import (
+    LEAD_IMPORT_COLUMNS,
+    build_template_file,
+    empty_to_none,
+    import_error_message,
+    parse_import_table,
+)
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
 
 def _lead_dimensions_from_model(lead: Lead) -> dict[str, str | None]:
     return {field_name: getattr(lead, field_name) for field_name in SCORING_FIELD_KEYS}
-
-
-def _normalize_name(value: str | None) -> str:
-    return str(value or "").strip().lower()
 
 
 def _has_meaningful_value(value: Any) -> bool:
@@ -115,19 +120,103 @@ def _apply_lead_payload(
         )
 
 
-async def _find_latest_lead_by_name(name: str, db: AsyncSession) -> Lead | None:
-    normalized_name = _normalize_name(name)
-    if not normalized_name:
-        return None
-
-    result = await db.execute(
-        select(Lead)
-        .where(func.lower(func.trim(Lead.name)) == normalized_name)
-        .options(selectinload(Lead.owner))
-        .order_by(Lead.updated_at.desc(), Lead.created_at.desc())
-        .limit(1)
+def _new_lead_from_data(data: dict[str, Any], current_user: User) -> Lead:
+    scoring = calculate_card_score(data)
+    status = normalize_lead_status(data.get("status"))
+    return Lead(
+        name=data["name"],
+        company=data.get("company"),
+        email=data.get("email"),
+        phone=data.get("phone"),
+        source=data.get("source"),
+        status=status,
+        score=scoring.total_score,
+        card_score=scoring.total_score,
+        card_level=scoring.card_level,
+        is_active=status_to_active(status),
+        owner_id=current_user.id,
+        score_detail_json=scoring.detail,
+        custom_fields=data.get("custom_fields") or {},
+        **scoring.dimensions,
     )
-    return result.scalars().first()
+
+
+def _is_yes(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"是", "yes", "y", "true", "1", "通过", "pass", "passed"}
+
+
+def _is_no(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"否", "no", "n", "false", "0", "不通过", "fail", "failed"}
+
+
+def _lead_status_from_import(value: str | None, custom_fields: dict[str, Any]) -> str:
+    aliases = {
+        "": "",
+        "新建": "new",
+        "新增": "new",
+        "new": "new",
+        "跟进": "follow_up",
+        "跟进中": "follow_up",
+        "follow_up": "follow_up",
+        "working": "follow_up",
+        "已转化": "converted",
+        "转化": "converted",
+        "converted": "converted",
+        "无效": "invalid",
+        "invalid": "invalid",
+        "disqualified": "invalid",
+        "归档": "archived",
+        "archived": "archived",
+    }
+    normalized = aliases.get(str(value or "").strip().lower())
+    if normalized:
+        return normalized
+    if _is_yes(custom_fields.get("third_review_pass")):
+        return "converted"
+    if _is_yes(custom_fields.get("second_review_pass")):
+        return "follow_up"
+    if _is_no(custom_fields.get("first_review_pass")):
+        return "invalid"
+    return "new"
+
+
+def _lead_payload_from_import_row(row: dict[str, str], current_user: User) -> dict[str, Any]:
+    unit_name = str(row.get("unit_name") or "").strip()
+    if not unit_name:
+        raise ValueError("单位名称必填")
+
+    custom_fields = {
+        "business_owner": row.get("business_owner") or "",
+        "unit_name": unit_name,
+        "industry_category": row.get("industry_category") or "",
+        "customer_type": row.get("customer_type") or "",
+        "opportunity_level": row.get("opportunity_level") or "",
+        "requirement_desc": row.get("requirement_desc") or "",
+        "budget_amount": row.get("budget_amount") or "",
+        "lead_source": row.get("lead_source") or "",
+        "purchased_related_products": row.get("purchased_related_products") or "",
+        "first_review_pass": row.get("first_review_pass") or "",
+        "visit_key_time": row.get("visit_key_time") or "",
+        "decision_chain_info": row.get("decision_chain_info") or "",
+        "cooperation_intent": row.get("cooperation_intent") or "",
+        "next_visit_plan": row.get("next_visit_plan") or "",
+        "second_review_pass": row.get("second_review_pass") or "",
+        "cooperation_scheme_status": row.get("cooperation_scheme_status") or "",
+        "key_person_approved": row.get("key_person_approved") or "",
+        "next_step_plan": row.get("next_step_plan") or "",
+        "third_review_pass": row.get("third_review_pass") or "",
+        "import_owner_username": current_user.username,
+    }
+
+    return {
+        "name": unit_name,
+        "company": unit_name,
+        "email": empty_to_none(row.get("email")),
+        "phone": empty_to_none(row.get("phone")),
+        "source": empty_to_none(row.get("lead_source")),
+        "status": _lead_status_from_import(row.get("status"), custom_fields),
+        "custom_fields": custom_fields,
+    }
 
 
 @router.get("", response_model=PaginatedResponse, summary="线索列表（支持分页）")
@@ -170,52 +259,63 @@ async def list_leads(
 @router.post("", response_model=LeadOut, status_code=201, summary="Create lead")
 async def create_lead(
     payload: LeadCreate,
-    response: Response,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     data = payload.model_dump(exclude_unset=True)
-    existing = await _find_latest_lead_by_name(data["name"], db)
-
-    if existing:
-        if not can_edit_owned_resource(current_user, existing.owner_id):
-            raise HTTPException(status_code=403, detail="已存在同名线索，当前账号不能覆盖他人数据")
-
-        _apply_lead_payload(
-            existing,
-            data,
-            ignore_empty=True,
-            preserve_existing_status=True,
-        )
-        await db.commit()
-        await db.refresh(existing)
-        await db.refresh(existing, ["owner"])
-        response.status_code = 200
-        return LeadOut.model_validate(existing)
-
-    scoring = calculate_card_score(data)
-    custom_fields = data.get("custom_fields") or {}
-    lead = Lead(
-        name=data["name"],
-        company=data.get("company"),
-        email=data.get("email"),
-        phone=data.get("phone"),
-        source=data.get("source"),
-        status=normalize_lead_status(data.get("status")),
-        score=scoring.total_score,
-        card_score=scoring.total_score,
-        card_level=scoring.card_level,
-        is_active=status_to_active(data.get("status", "new")),
-        owner_id=current_user.id,
-        score_detail_json=scoring.detail,
-        custom_fields=custom_fields,
-        **scoring.dimensions,
-    )
+    lead = _new_lead_from_data(data, current_user)
     db.add(lead)
     await db.commit()
     await db.refresh(lead)
     await db.refresh(lead, ["owner"])
     return LeadOut.model_validate(lead)
+
+
+@router.get("/import-template", summary="Download lead import template")
+async def download_lead_import_template(
+    format: str = Query("xlsx", pattern="^(xlsx|csv)$"),
+    _: User = Depends(get_current_user),
+):
+    content, media_type, extension = build_template_file(LEAD_IMPORT_COLUMNS, format)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="leads_import_template.{extension}"'},
+    )
+
+
+@router.post("/import", summary="Import leads from xlsx/csv")
+async def import_leads(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    content = await file.read()
+    try:
+        rows = parse_import_table(file.filename or "", content, LEAD_IMPORT_COLUMNS)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    errors: list[dict[str, Any]] = []
+    created = 0
+    for row in rows:
+        try:
+            payload = _lead_payload_from_import_row(row.values, current_user)
+            data = LeadCreate.model_validate(payload).model_dump(exclude_unset=True)
+            db.add(_new_lead_from_data(data, current_user))
+            created += 1
+        except Exception as exc:
+            errors.append({"row": row.row_number, "message": import_error_message(exc)})
+
+    if created:
+        await db.commit()
+
+    return {
+        "total": len(rows),
+        "created": created,
+        "failed": len(errors),
+        "errors": errors[:50],
+    }
 
 
 @router.patch("/{lead_id}", response_model=LeadOut, summary="Update lead")

@@ -4,11 +4,14 @@ Opportunity API routes.
 
 from __future__ import annotations
 
+import io
+import re
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -26,6 +29,8 @@ from app.schemas import (
 )
 from app.services.crm_rules_service import (
     DEFAULT_OPPORTUNITY_STAGE,
+    NEGOTIATION_STAGE,
+    QUOTE_STAGE,
     STAGE_DEFAULT_PROBABILITY,
     STAGE_ORDER,
     WON_STAGE,
@@ -35,6 +40,13 @@ from app.services.crm_rules_service import (
     status_to_active,
 )
 from app.services.scoring_service import SCORING_FIELD_KEYS, calculate_card_score
+from app.services.table_import_service import (
+    OPPORTUNITY_IMPORT_COLUMNS,
+    build_template_file,
+    empty_to_none,
+    import_error_message,
+    parse_import_table,
+)
 
 router = APIRouter(prefix="/api/opportunities", tags=["opportunities"])
 
@@ -214,6 +226,186 @@ def _sync_stage_state(
         opportunity.closed_at = None
 
 
+def _new_opportunity_from_data(data: dict, current_user: User) -> Opportunity:
+    scoring = calculate_card_score(_opportunity_dimensions_from_payload(data))
+    now = datetime.now(timezone.utc)
+
+    stage = normalize_opportunity_stage(data.get("stage"))
+    status = str(data.get("status") or "new").strip().lower()
+    if status != "archived":
+        status = derive_opportunity_status(stage, status)
+
+    opportunity = Opportunity(
+        name=_build_opportunity_name(data),
+        account_id=str(data["account_id"]) if data.get("account_id") else None,
+        contact_id=str(data["contact_id"]) if data.get("contact_id") else None,
+        owner_id=current_user.id,
+        amount=data.get("amount"),
+        close_date=data.get("close_date"),
+        source=data.get("source"),
+        status=status,
+        is_active=status_to_active(status),
+        card_score=scoring.total_score,
+        card_level=scoring.card_level,
+        score_detail_json=scoring.detail,
+        ai_confidence=data.get("ai_confidence"),
+        ai_raw_text=data.get("ai_raw_text"),
+        ai_extracted=data.get("ai_extracted") or {},
+        custom_fields=_merge_custom_fields(data.get("custom_fields") or {}, data),
+        customer_name=data.get("customer_name"),
+        customer_type=data.get("customer_type"),
+        requirement_desc=data.get("requirement_desc"),
+        product_name=data.get("product_name"),
+        estimated_cycle=data.get("estimated_cycle"),
+        opportunity_level=data.get("opportunity_level"),
+        project_date=data.get("project_date"),
+        project_members=data.get("project_members"),
+        solution_communication=data.get("solution_communication"),
+        poc_status=data.get("poc_status"),
+        key_person_approved=data.get("key_person_approved"),
+        bid_probability=data.get("bid_probability"),
+        contract_negotiation=data.get("contract_negotiation"),
+        project_type=data.get("project_type"),
+        contract_signed=data.get("contract_signed"),
+        handoff_completed=data.get("handoff_completed"),
+        **scoring.dimensions,
+    )
+
+    _sync_stage_state(opportunity, stage, now, override_probability=data.get("probability"))
+    return opportunity
+
+
+def _is_yes(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"是", "yes", "y", "true", "1", "已签订"}
+
+
+def _parse_import_amount(value: str | None) -> float | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    normalized = re.sub(r"[,，￥¥\s]", "", text)
+    if normalized.endswith("万"):
+        return float(normalized[:-1]) * 10000
+    return float(normalized)
+
+
+def _opportunity_stage_from_import(value: str | None, row: dict[str, str]) -> str:
+    aliases = {
+        DEFAULT_OPPORTUNITY_STAGE.lower(): DEFAULT_OPPORTUNITY_STAGE,
+        "初步接触": DEFAULT_OPPORTUNITY_STAGE,
+        "new": DEFAULT_OPPORTUNITY_STAGE,
+        QUOTE_STAGE.lower(): QUOTE_STAGE,
+        "方案报价": QUOTE_STAGE,
+        "quote": QUOTE_STAGE,
+        NEGOTIATION_STAGE.lower(): NEGOTIATION_STAGE,
+        "合同谈判": NEGOTIATION_STAGE,
+        "negotiation": NEGOTIATION_STAGE,
+        WON_STAGE.lower(): WON_STAGE,
+        "赢单": WON_STAGE,
+        "won": WON_STAGE,
+        LOST_STAGE.lower(): LOST_STAGE,
+        "输单": LOST_STAGE,
+        "lost": LOST_STAGE,
+    }
+    normalized = aliases.get(str(value or "").strip().lower())
+    if normalized:
+        return normalized
+    if _is_yes(row.get("contract_signed")):
+        return WON_STAGE
+    if row.get("contract_negotiation"):
+        return NEGOTIATION_STAGE
+    if row.get("solution_communication") or row.get("poc_status") or _is_yes(row.get("key_person_approved")):
+        return QUOTE_STAGE
+    return DEFAULT_OPPORTUNITY_STAGE
+
+
+def _opportunity_status_from_import(value: str | None, row: dict[str, str]) -> str:
+    aliases = {
+        "": "",
+        "新建": "new",
+        "新增": "new",
+        "new": "new",
+        "跟进": "follow_up",
+        "跟进中": "follow_up",
+        "follow_up": "follow_up",
+        "已赢单": "won",
+        "赢单": "won",
+        "won": "won",
+        "已输单": "lost",
+        "输单": "lost",
+        "lost": "lost",
+        "归档": "archived",
+        "archived": "archived",
+    }
+    normalized = aliases.get(str(value or "").strip().lower())
+    if normalized:
+        return normalized
+    return "won" if _is_yes(row.get("contract_signed")) else "follow_up"
+
+
+def _opportunity_payload_from_import_row(row: dict[str, str], current_user: User) -> dict:
+    customer_name = str(row.get("customer_name") or "").strip()
+    product_name = str(row.get("product_name") or "").strip()
+    if not customer_name:
+        raise ValueError("客户名称必填")
+    if not product_name:
+        raise ValueError("涉及产品必填")
+
+    custom_fields = {
+        "owner_name_display": row.get("owner_name_display") or current_user.username,
+        "customer_name": customer_name,
+        "customer_type": row.get("customer_type") or "",
+        "requirement_desc": row.get("requirement_desc") or "",
+        "product_name": product_name,
+        "estimated_cycle": row.get("estimated_cycle") or "",
+        "opportunity_level": row.get("opportunity_level") or "",
+        "project_date": row.get("project_date") or "",
+        "project_members": row.get("project_members") or "",
+        "solution_communication": row.get("solution_communication") or "",
+        "poc_status": row.get("poc_status") or "",
+        "key_person_approved": row.get("key_person_approved") or "",
+        "bid_probability": row.get("bid_probability") or "",
+        "contract_negotiation": row.get("contract_negotiation") or "",
+        "project_type": row.get("project_type") or "",
+        "contract_signed": row.get("contract_signed") or "",
+        "handoff_completed": row.get("handoff_completed") or "",
+        "company": customer_name,
+        "demand": row.get("requirement_desc") or "",
+        "product": product_name,
+        "level": row.get("opportunity_level") or "",
+        "bcard": row.get("bid_probability") or "",
+        "approve": row.get("key_person_approved") or "",
+        "signed": row.get("contract_signed") or "",
+        "notes": row.get("requirement_desc") or "",
+        "import_owner_username": current_user.username,
+    }
+
+    return {
+        "name": f"{customer_name} - {product_name}",
+        "stage": _opportunity_stage_from_import(row.get("stage"), row),
+        "status": _opportunity_status_from_import(row.get("status"), row),
+        "amount": _parse_import_amount(row.get("amount")),
+        "source": "import",
+        "customer_name": customer_name,
+        "customer_type": empty_to_none(row.get("customer_type")),
+        "requirement_desc": empty_to_none(row.get("requirement_desc")),
+        "product_name": product_name,
+        "estimated_cycle": empty_to_none(row.get("estimated_cycle")),
+        "opportunity_level": empty_to_none(row.get("opportunity_level")),
+        "project_date": empty_to_none(row.get("project_date")),
+        "project_members": empty_to_none(row.get("project_members")),
+        "solution_communication": empty_to_none(row.get("solution_communication")),
+        "poc_status": empty_to_none(row.get("poc_status")),
+        "key_person_approved": empty_to_none(row.get("key_person_approved")),
+        "bid_probability": empty_to_none(row.get("bid_probability")),
+        "contract_negotiation": empty_to_none(row.get("contract_negotiation")),
+        "project_type": empty_to_none(row.get("project_type")),
+        "contract_signed": empty_to_none(row.get("contract_signed")),
+        "handoff_completed": empty_to_none(row.get("handoff_completed")),
+        "custom_fields": custom_fields,
+    }
+
+
 @router.get("", response_model=PaginatedResponse, summary="Opportunity list")
 async def list_opportunities(
     page: int = Query(1, ge=1),
@@ -298,57 +490,60 @@ async def create_opportunity(
 ):
     raw_data = payload.model_dump(exclude_unset=True)
     data = _normalize_business_payload(raw_data)
-
-    scoring = calculate_card_score(_opportunity_dimensions_from_payload(data))
-    now = datetime.now(timezone.utc)
-
-    stage = normalize_opportunity_stage(data.get("stage"))
-    status = str(data.get("status") or "new").strip().lower()
-    if status != "archived":
-        status = derive_opportunity_status(stage, status)
-
-    opportunity = Opportunity(
-        name=_build_opportunity_name(data),
-        account_id=str(data["account_id"]) if data.get("account_id") else None,
-        contact_id=str(data["contact_id"]) if data.get("contact_id") else None,
-        owner_id=current_user.id,
-        amount=data.get("amount"),
-        close_date=data.get("close_date"),
-        source=data.get("source"),
-        status=status,
-        is_active=status_to_active(status),
-        card_score=scoring.total_score,
-        card_level=scoring.card_level,
-        score_detail_json=scoring.detail,
-        ai_confidence=data.get("ai_confidence"),
-        ai_raw_text=data.get("ai_raw_text"),
-        ai_extracted=data.get("ai_extracted") or {},
-        custom_fields=_merge_custom_fields(data.get("custom_fields") or {}, data),
-        customer_name=data.get("customer_name"),
-        customer_type=data.get("customer_type"),
-        requirement_desc=data.get("requirement_desc"),
-        product_name=data.get("product_name"),
-        estimated_cycle=data.get("estimated_cycle"),
-        opportunity_level=data.get("opportunity_level"),
-        project_date=data.get("project_date"),
-        project_members=data.get("project_members"),
-        solution_communication=data.get("solution_communication"),
-        poc_status=data.get("poc_status"),
-        key_person_approved=data.get("key_person_approved"),
-        bid_probability=data.get("bid_probability"),
-        contract_negotiation=data.get("contract_negotiation"),
-        project_type=data.get("project_type"),
-        contract_signed=data.get("contract_signed"),
-        handoff_completed=data.get("handoff_completed"),
-        **scoring.dimensions,
-    )
-
-    _sync_stage_state(opportunity, stage, now, override_probability=data.get("probability"))
+    opportunity = _new_opportunity_from_data(data, current_user)
     db.add(opportunity)
     await db.commit()
     await db.refresh(opportunity)
     await db.refresh(opportunity, ["owner"])
     return OpportunityOut.model_validate(opportunity)
+
+
+@router.get("/import-template", summary="Download opportunity import template")
+async def download_opportunity_import_template(
+    format: str = Query("xlsx", pattern="^(xlsx|csv)$"),
+    _: User = Depends(get_current_user),
+):
+    content, media_type, extension = build_template_file(OPPORTUNITY_IMPORT_COLUMNS, format)
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="opportunities_import_template.{extension}"'},
+    )
+
+
+@router.post("/import", summary="Import opportunities from xlsx/csv")
+async def import_opportunities(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    content = await file.read()
+    try:
+        rows = parse_import_table(file.filename or "", content, OPPORTUNITY_IMPORT_COLUMNS)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    errors: list[dict[str, object]] = []
+    created = 0
+    for row in rows:
+        try:
+            raw_payload = _opportunity_payload_from_import_row(row.values, current_user)
+            payload = OpportunityCreate.model_validate(raw_payload)
+            data = _normalize_business_payload(payload.model_dump(exclude_unset=True))
+            db.add(_new_opportunity_from_data(data, current_user))
+            created += 1
+        except Exception as exc:
+            errors.append({"row": row.row_number, "message": import_error_message(exc)})
+
+    if created:
+        await db.commit()
+
+    return {
+        "total": len(rows),
+        "created": created,
+        "failed": len(errors),
+        "errors": errors[:50],
+    }
 
 
 @router.patch("/{opp_id}", response_model=OpportunityOut, summary="Update opportunity")
