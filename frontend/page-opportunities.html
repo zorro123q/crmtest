@@ -499,7 +499,7 @@ tbody tr:hover{
         <div class="stat-card">
           <div class="stat-label">已签订合同</div>
           <div class="stat-value" id="stat-signed">0</div>
-          <div class="stat-hint">合同签订状态为“是”</div>
+          <div class="stat-hint">合同签订状态为"是"</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">高等级商机</div>
@@ -512,7 +512,7 @@ tbody tr:hover{
         <div class="panel-head">
           <div>
             <h2>商机列表</h2>
-            <span>列表展示关键管理字段；详细推进内容可点击“编辑/查看”进入弹窗查看。</span>
+            <span>列表展示关键管理字段；详细推进内容可点击"编辑/查看"进入弹窗查看。</span>
           </div>
           <span id="result-count">0 条记录</span>
         </div>
@@ -834,7 +834,8 @@ function normalizeOpportunity(item) {
   return {
     id: item.id,
     ownerId: item.owner_id || (item.owner && item.owner.id) || '',
-    ownerName: item.owner_username || (item.owner && item.owner.username) || custom.owner_name_display || '未分配',
+    // 负责人显示优先级：1. Excel导入原始负责人名 2. 系统owner_username 3. owner对象username
+    ownerName: custom.owner_name_display || item.owner_username || (item.owner && item.owner.username) || '未分配',
 
     customerName: item.customer_name || custom.customer_name || custom.company || '',
     customerType: item.customer_type || custom.customer_type || '',
@@ -859,6 +860,14 @@ function normalizeOpportunity(item) {
     updatedAt: item.updated_at || '',
     raw: item
   };
+}
+
+function canEditOpportunity() {
+  return !!currentUser;
+}
+
+function canDeleteOpportunity(item) {
+  return CRMApp.canEditOwner(currentUser, item.ownerId);
 }
 
 function getSearchText(item) {
@@ -960,7 +969,8 @@ function renderTable() {
   empty.style.display = 'none';
 
   tbody.innerHTML = filteredOpportunities.map(function(item) {
-    var editable = CRMApp.canEditOwner(currentUser, item.ownerId);
+    var editable = canEditOpportunity(item);
+    var deletable = canDeleteOpportunity(item);
 
     return ''
       + '<tr>'
@@ -985,7 +995,7 @@ function renderTable() {
       +   '<td>'
       +     '<div class="action-group">'
       +       '<button class="action-btn ' + (editable ? 'action-edit' : 'action-view') + '" onclick="openDetailModal(\'' + item.id + '\')">' + (editable ? '编辑' : '查看') + '</button>'
-      +       (editable ? '<button class="action-btn action-delete" onclick="deleteOpportunity(\'' + item.id + '\')">删除</button>' : '')
+      +       (deletable ? '<button class="action-btn action-delete" onclick="deleteOpportunity(\'' + item.id + '\')">删除</button>' : '')
       +     '</div>'
       +   '</td>'
       + '</tr>';
@@ -1029,7 +1039,7 @@ function updateDuplicateWarning() {
   }
 
   warningEl.style.display = 'block';
-  warningEl.textContent = '重复提醒：当前已存在 ' + duplicates.length + ' 条“客户名称 + 涉及产品”相同的商机，请确认是否为同一项目的重复录入。';
+  warningEl.textContent = '重复提醒：当前已存在 ' + duplicates.length + ' 条"客户名称 + 涉及产品"相同的商机，请确认是否为同一项目的重复录入。';
 }
 
 function setFormReadOnly(readOnly) {
@@ -1122,7 +1132,7 @@ function openDetailModal(id) {
   if (!item) return;
 
   editingOppId = id;
-  var editable = CRMApp.canEditOwner(currentUser, item.ownerId);
+  var editable = canEditOpportunity(item);
   currentMode = editable ? 'edit' : 'view';
 
   document.getElementById('modal-title').textContent = editable ? '编辑商机' : '查看商机';
@@ -1256,7 +1266,7 @@ async function saveOpportunity() {
     var existing = opportunities.find(function(entry) {
       return entry.id === editingOppId;
     });
-    if (!existing || !CRMApp.canEditOwner(currentUser, existing.ownerId)) {
+    if (!existing || !canEditOpportunity(existing)) {
       closeModal();
       return;
     }
@@ -1291,11 +1301,11 @@ async function deleteOpportunity(id) {
     return entry.id === id;
   });
 
-  if (!existing || !CRMApp.canEditOwner(currentUser, existing.ownerId)) {
+  if (!existing || !canDeleteOpportunity(existing)) {
     return;
   }
 
-  var confirmed = window.confirm('确认删除客户“' + (existing.customerName || '未命名客户') + '”的商机记录？删除后不可恢复。');
+  var confirmed = window.confirm('确认删除客户"' + (existing.customerName || '未命名客户') + '"的商机记录？删除后不可恢复。');
   if (!confirmed) return;
 
   try {

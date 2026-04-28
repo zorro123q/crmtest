@@ -235,11 +235,14 @@ def _new_opportunity_from_data(data: dict, current_user: User) -> Opportunity:
     if status != "archived":
         status = derive_opportunity_status(stage, status)
 
+    # 支持导入时传入 _owner_id_override，否则使用当前用户
+    owner_id = data.get("_owner_id_override") if "_owner_id_override" in data else current_user.id
+
     opportunity = Opportunity(
         name=_build_opportunity_name(data),
         account_id=str(data["account_id"]) if data.get("account_id") else None,
         contact_id=str(data["contact_id"]) if data.get("contact_id") else None,
-        owner_id=current_user.id,
+        owner_id=owner_id,
         amount=data.get("amount"),
         close_date=data.get("close_date"),
         source=data.get("source"),
@@ -277,6 +280,19 @@ def _new_opportunity_from_data(data: dict, current_user: User) -> Opportunity:
 
 def _is_yes(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"是", "yes", "y", "true", "1", "已签订"}
+
+
+async def _resolve_owner_id_by_name(db: AsyncSession, owner_name: str | None) -> str | None:
+    """
+    根据负责人姓名解析 owner_id。
+    如果系统中存在同名的已注册用户，返回该用户 id；否则返回 None。
+    """
+    text = str(owner_name or "").strip()
+    if not text:
+        return None
+    result = await db.execute(select(User).where(User.username == text))
+    user = result.scalar_one_or_none()
+    return str(user.id) if user else None
 
 
 def _parse_import_amount(value: str | None) -> float | None:
@@ -351,8 +367,14 @@ def _opportunity_payload_from_import_row(row: dict[str, str], current_user: User
     if not product_name:
         raise ValueError("涉及产品必填")
 
+    # serial_no 不入库，只读取后丢弃
+    serial_no = row.get("serial_no")
+
+    # 从 Excel 读取负责人姓名（无论是否已注册都要保存）
+    owner_name_from_excel = row.get("owner_name_display") or ""
+
     custom_fields = {
-        "owner_name_display": row.get("owner_name_display") or current_user.username,
+        "owner_name_display": owner_name_from_excel,
         "customer_name": customer_name,
         "customer_type": row.get("customer_type") or "",
         "requirement_desc": row.get("requirement_desc") or "",
@@ -377,7 +399,8 @@ def _opportunity_payload_from_import_row(row: dict[str, str], current_user: User
         "approve": row.get("key_person_approved") or "",
         "signed": row.get("contract_signed") or "",
         "notes": row.get("requirement_desc") or "",
-        "import_owner_username": current_user.username,
+        "import_user_id": current_user.id,
+        "import_username": current_user.username,
     }
 
     return {
@@ -528,6 +551,15 @@ async def import_opportunities(
     for row in rows:
         try:
             raw_payload = _opportunity_payload_from_import_row(row.values, current_user)
+
+            # 解析负责人：如果 Excel 中有负责人姓名，尝试绑定到已注册用户
+            owner_name = raw_payload["custom_fields"].get("owner_name_display")
+            if owner_name:
+                # 尝试解析负责人 ID，如果未注册则保持 None
+                resolved_owner_id = await _resolve_owner_id_by_name(db, owner_name)
+                raw_payload["_owner_id_override"] = resolved_owner_id
+                # resolved_owner_id 是 None 时表示负责人未注册，不要 fallback 到 current_user.id
+
             payload = OpportunityCreate.model_validate(raw_payload)
             data = _normalize_business_payload(payload.model_dump(exclude_unset=True))
             db.add(_new_opportunity_from_data(data, current_user))
@@ -551,9 +583,9 @@ async def update_opportunity(
     opp_id: UUID,
     payload: OpportunityUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
-    opportunity = await _get_opp_or_403(opp_id, db, current_user)
+    opportunity = await _get_opp_or_404(opp_id, db)
 
     raw_data = payload.model_dump(exclude_unset=True)
     data = _normalize_business_payload(raw_data)
@@ -611,9 +643,9 @@ async def move_stage(
     opp_id: UUID,
     payload: StageMoveRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
-    opportunity = await _get_opp_or_403(opp_id, db, current_user)
+    opportunity = await _get_opp_or_404(opp_id, db)
     _sync_stage_state(opportunity, payload.stage, datetime.now(timezone.utc), override_closed_at=True)
     if opportunity.status != "archived":
         opportunity.status = derive_opportunity_status(opportunity.stage, opportunity.status)
@@ -635,6 +667,16 @@ async def delete_opportunity(
     await db.delete(opportunity)
     await db.commit()
     return MessageResponse(message="商机已删除")
+
+
+async def _get_opp_or_404(opp_id: UUID, db: AsyncSession) -> Opportunity:
+    result = await db.execute(
+        select(Opportunity).where(Opportunity.id == str(opp_id)).options(selectinload(Opportunity.owner))
+    )
+    opportunity = result.scalar_one_or_none()
+    if not opportunity:
+        raise HTTPException(status_code=404, detail="Opportunity not found")
+    return opportunity
 
 
 async def _get_opp_or_403(opp_id: UUID, db: AsyncSession, current_user: User) -> Opportunity:

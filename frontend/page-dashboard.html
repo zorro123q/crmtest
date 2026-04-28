@@ -347,6 +347,31 @@ body{
         <div class="kpi-value" id="kpi-win-rate">-</div>
         <div class="kpi-hint">按活跃商机的 `probability` 字段做平均。</div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-label">线索总数</div>
+        <div class="kpi-value" id="kpi-total-leads">-</div>
+        <div class="kpi-hint">包含手动新增和批量导入的线索。</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">商机总数</div>
+        <div class="kpi-value" id="kpi-total-opportunities">-</div>
+        <div class="kpi-hint">包含手动新增和批量导入的商机。</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">本季度新增线索</div>
+        <div class="kpi-value" id="kpi-quarter-leads">-</div>
+        <div class="kpi-hint">按 created_at 统计，导入数据也会计入。</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">本季度新增商机</div>
+        <div class="kpi-value" id="kpi-quarter-opportunities">-</div>
+        <div class="kpi-hint">按 created_at 统计，导入数据也会计入。</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">导入商机数</div>
+        <div class="kpi-value" id="kpi-imported-opportunities">-</div>
+        <div class="kpi-hint">统计 source 为 import 的商机记录。</div>
+      </div>
     </div>
 
     <div class="charts-row">
@@ -381,7 +406,15 @@ body{
 CRMApp.requireAuth();
 
 function formatAmount(value) {
-  return '¥' + Number(value || 0).toLocaleString('zh-CN') + '万';
+  var amount = Number(value || 0);
+  return '¥' + (amount / 10000).toLocaleString('zh-CN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }) + '万';
+}
+
+function amountToWan(value) {
+  return Number(value || 0) / 10000;
 }
 
 function formatPercent(value) {
@@ -408,6 +441,11 @@ function renderKpis(dashboard) {
   document.getElementById('kpi-won-count').textContent = Number(dashboard.total_won_deals_this_week || 0).toLocaleString('zh-CN');
   document.getElementById('kpi-active').textContent = Number(dashboard.active_opportunities_count || 0).toLocaleString('zh-CN');
   document.getElementById('kpi-win-rate').textContent = formatPercent(dashboard.average_win_rate);
+  document.getElementById('kpi-total-leads').textContent = Number(dashboard.total_leads_count || 0).toLocaleString('zh-CN');
+  document.getElementById('kpi-total-opportunities').textContent = Number(dashboard.total_opportunities_count || 0).toLocaleString('zh-CN');
+  document.getElementById('kpi-quarter-leads').textContent = Number(dashboard.quarter_leads_created_count || 0).toLocaleString('zh-CN');
+  document.getElementById('kpi-quarter-opportunities').textContent = Number(dashboard.quarter_opportunities_created_count || 0).toLocaleString('zh-CN');
+  document.getElementById('kpi-imported-opportunities').textContent = Number(dashboard.imported_opportunities_count || 0).toLocaleString('zh-CN');
 }
 
 function renderFunnelChart(stages) {
@@ -447,7 +485,7 @@ function renderTrendChart(rows) {
       {
         name: '赢单金额',
         type: 'line',
-        data: rows.map(function(item) { return item.won_amount; }),
+        data: rows.map(function(item) { return amountToWan(item.won_amount); }),
         smooth: true,
         itemStyle: { color: '#10B981' },
         areaStyle: { color: 'rgba(16,185,129,0.1)' }
@@ -455,7 +493,7 @@ function renderTrendChart(rows) {
       {
         name: '管道增量',
         type: 'line',
-        data: rows.map(function(item) { return item.pipeline_amount; }),
+        data: rows.map(function(item) { return amountToWan(item.pipeline_amount); }),
         smooth: true,
         itemStyle: { color: '#0EA5E9' },
         areaStyle: { color: 'rgba(14,165,233,0.1)' }
@@ -475,7 +513,7 @@ function renderRankChart(rows) {
     yAxis: { type: 'category', data: safeRows.map(function(item) { return item.owner; }).reverse() },
     series: [{
       type: 'bar',
-      data: safeRows.map(function(item) { return item.won_amount; }).reverse(),
+      data: safeRows.map(function(item) { return amountToWan(item.won_amount); }).reverse(),
       itemStyle: { color: '#6366F1' },
       barWidth: 16,
       label: { show: true, position: 'right', formatter: '{c}万' }

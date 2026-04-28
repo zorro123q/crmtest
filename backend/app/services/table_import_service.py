@@ -35,8 +35,9 @@ class ImportRow:
 
 
 LEAD_IMPORT_COLUMNS = (
+    ImportColumn("serial_no", "序号", False, "1", ("编号", "序列号")),
+    ImportColumn("business_owner", "商务名称", False, "张三", ("商务负责人", "负责人", "销售负责人")),
     ImportColumn("unit_name", "单位名称", True, "示例科技有限公司", ("客户名称", "公司名称", "公司", "name", "company")),
-    ImportColumn("business_owner", "商务负责人", False, "张三"),
     ImportColumn("industry_category", "行业类别", False, "金融"),
     ImportColumn("customer_type", "新老客户", False, "新客户"),
     ImportColumn("opportunity_level", "商机等级", False, "A"),
@@ -44,16 +45,16 @@ LEAD_IMPORT_COLUMNS = (
     ImportColumn("budget_amount", "预算额度", False, "100万"),
     ImportColumn("lead_source", "线索来源", False, "展会"),
     ImportColumn("purchased_related_products", "是否采购过相关产品", False, "否"),
-    ImportColumn("first_review_pass", "第一次初审是否通过", False, "是"),
+    ImportColumn("first_review_pass", "初审是否通过", False, "是", ("第一次初审是否通过",)),
     ImportColumn("visit_key_time", "拜访客户关键人时间", False, "2026-04-27"),
     ImportColumn("decision_chain_info", "关键决策链信息", False, "业务负责人和采购负责人共同评估"),
     ImportColumn("cooperation_intent", "需求及合作意向", False, "高"),
     ImportColumn("next_visit_plan", "下次拜访计划", False, "约方案评审会"),
-    ImportColumn("second_review_pass", "第二次初审是否通过", False, ""),
+    ImportColumn("second_review_pass", "初审是否通过", False, "", ("第二次初审是否通过",)),
     ImportColumn("cooperation_scheme_status", "合作方案交流情况", False, "方案沟通中"),
     ImportColumn("key_person_approved", "关键人是否认可", False, ""),
     ImportColumn("next_step_plan", "下步计划", False, "补充预算测算"),
-    ImportColumn("third_review_pass", "第三次初审是否通过", False, ""),
+    ImportColumn("third_review_pass", "初审是否通过", False, "", ("第三次初审是否通过",)),
     ImportColumn("status", "状态", False, "", ("status",)),
     ImportColumn("email", "邮箱", False, "lead@example.com", ("email",)),
     ImportColumn("phone", "电话", False, "13800000000", ("phone",)),
@@ -61,24 +62,25 @@ LEAD_IMPORT_COLUMNS = (
 
 
 OPPORTUNITY_IMPORT_COLUMNS = (
-    ImportColumn("customer_name", "客户名称", True, "示例科技有限公司", ("公司名称", "公司", "customer", "company")),
-    ImportColumn("product_name", "涉及产品", True, "智能外呼平台", ("产品名称", "product")),
-    ImportColumn("owner_name_display", "商机负责人", False, "张三"),
+    ImportColumn("serial_no", "序号", False, "1", ("编号", "序列号")),
+    ImportColumn("owner_name_display", "商务负责人", False, "张三", ("商机负责人", "负责人", "销售负责人")),
+    ImportColumn("customer_name", "（客户）名称", True, "示例科技有限公司", ("客户名称", "公司名称", "公司", "customer", "company")),
     ImportColumn("customer_type", "新老客户", False, "新客户"),
-    ImportColumn("requirement_desc", "需求描述", False, "需要智能外呼和质检能力"),
+    ImportColumn("requirement_desc", "需求描述（需要详细描述）", False, "需要智能外呼和质检能力", ("需求描述", "需求详情")),
+    ImportColumn("product_name", "涉及产品", True, "智能外呼平台", ("产品名称", "product")),
     ImportColumn("amount", "预算情况", False, "1000000", ("预算金额", "金额", "budget", "amount")),
-    ImportColumn("estimated_cycle", "预计成交周期", False, "3个月"),
+    ImportColumn("estimated_cycle", "预估成交周期", False, "3个月", ("预计成交周期",)),
     ImportColumn("opportunity_level", "商机等级", False, "A"),
     ImportColumn("project_date", "立项日期", False, "2026-04-27"),
     ImportColumn("project_members", "项目组成员", False, "张三、李四"),
-    ImportColumn("solution_communication", "解决方案沟通情况", False, "方案沟通中"),
-    ImportColumn("poc_status", "POC测试情况", False, "待启动"),
+    ImportColumn("solution_communication", "解决方案沟通情况（需要填写沟通情况及结果）", False, "方案沟通中", ("解决方案沟通情况", "方案沟通情况")),
+    ImportColumn("poc_status", "POC测试情况", False, "待启动", ("POC 测试情况",)),
     ImportColumn("key_person_approved", "关键人是否对方案认可", False, "待确认"),
-    ImportColumn("bid_probability", "商机B卡中标的概率", False, "B"),
+    ImportColumn("bid_probability", "商机B卡中的概率", False, "B", ("商机B卡中标的概率", "商机B卡中标概率", "B卡中标概率")),
     ImportColumn("contract_negotiation", "合同谈判情况", False, ""),
     ImportColumn("project_type", "项目类型", False, "SaaS"),
     ImportColumn("contract_signed", "是否已签订合同", False, "否"),
-    ImportColumn("handoff_completed", "是否完成项目交底", False, "否"),
+    ImportColumn("handoff_completed", "是否已完成项目交底", False, "否", ("是否完成项目的交底", "是否完成交底")),
     ImportColumn("stage", "阶段", False, "", ("商机阶段", "stage")),
     ImportColumn("status", "状态", False, "", ("status",)),
 )
@@ -137,14 +139,17 @@ def import_error_message(exc: Exception) -> str:
 def _parse_csv(content: bytes, columns: Iterable[ImportColumn]) -> list[ImportRow]:
     column_list = list(columns)
     text = _decode_csv(content)
-    reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames:
-        raise ValueError("文件缺少表头")
+    reader = csv.reader(io.StringIO(text))
+    rows_raw = list(reader)
 
-    alias_map = _column_alias_map(column_list)
+    if not rows_raw:
+        raise ValueError("文件内容为空")
+
+    headers = rows_raw[0]
     rows: list[ImportRow] = []
-    for index, raw_row in enumerate(reader, start=2):
-        mapped = _map_row(raw_row, alias_map)
+
+    for index, values in enumerate(rows_raw[1:], start=2):
+        mapped = _map_row_by_headers(headers, values, column_list)
         if _is_blank_row(mapped) or _is_template_sample_row(mapped, column_list):
             continue
         rows.append(ImportRow(row_number=index, values=mapped))
@@ -187,14 +192,12 @@ def _parse_xlsx(content: bytes, columns: Iterable[ImportColumn]) -> list[ImportR
         raise ValueError("文件缺少表头")
 
     header_number, headers = header_row
-    alias_map = _column_alias_map(column_list)
     rows: list[ImportRow] = []
 
     for row_number, values in raw_rows:
         if row_number <= header_number:
             continue
-        raw_row = {headers[index]: values[index] if index < len(values) else "" for index in range(len(headers))}
-        mapped = _map_row(raw_row, alias_map)
+        mapped = _map_row_by_headers(headers, values, column_list)
         if _is_blank_row(mapped) or _is_template_sample_row(mapped, column_list):
             continue
         rows.append(ImportRow(row_number=row_number, values=mapped))
@@ -217,6 +220,71 @@ def _column_alias_map(columns: Iterable[ImportColumn]) -> dict[str, str]:
         for label in labels:
             mapping[normalize_header(label)] = column.key
     return mapping
+
+
+def _build_column_alias_sets(columns: list[ImportColumn]) -> list[set[str]]:
+    """
+    为每个 ImportColumn 构建标准化别名集合，包含：
+    - key
+    - title
+    - 所有 aliases
+    用于重复表头匹配。
+    """
+    result = []
+    for column in columns:
+        aliases = set()
+        # 添加 key
+        aliases.add(normalize_header(column.key))
+        # 添加 title
+        aliases.add(normalize_header(column.title))
+        # 添加所有 aliases
+        for alias in column.aliases:
+            aliases.add(normalize_header(alias))
+        result.append(aliases)
+    return result
+
+
+def _map_row_by_headers(headers: list[str], values: list[str], columns: list[ImportColumn]) -> dict[str, str]:
+    """
+    按 headers 顺序 + columns 定义顺序映射一行数据。
+    支持重复表头：对于同名列（如多个"初审是否通过"），
+    按 columns 中出现顺序依次匹配下一个同名列。
+    """
+    column_list = columns
+    alias_sets = _build_column_alias_sets(column_list)
+
+    # 记录每个列已经被匹配过的次数（用于处理重复表头）
+    # matched_count[i] 表示 column_list[i] 已经被消费了几次
+    matched_count = [0] * len(column_list)
+
+    mapped: dict[str, str] = {}
+
+    for header_index, header in enumerate(headers):
+        header_normalized = normalize_header(header)
+        if not header_normalized:
+            continue
+
+        value = values[header_index] if header_index < len(values) else ""
+
+        # 找到所有能匹配这个 header 的列
+        matching_cols = []
+        for col_index, alias_set in enumerate(alias_sets):
+            if header_normalized in alias_set:
+                matching_cols.append(col_index)
+
+        if not matching_cols:
+            continue
+
+        # 选择第一个未消费的匹配列
+        # 这样对于重复表头，会按 columns 顺序依次消费
+        for col_index in matching_cols:
+            if matched_count[col_index] == 0:
+                matched_count[col_index] = 1
+                key = column_list[col_index].key
+                mapped[key] = str(value or "").strip()
+                break
+
+    return mapped
 
 
 def _map_row(raw_row: dict[str, str | None], alias_map: dict[str, str]) -> dict[str, str]:

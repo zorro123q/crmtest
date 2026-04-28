@@ -123,6 +123,8 @@ def _apply_lead_payload(
 def _new_lead_from_data(data: dict[str, Any], current_user: User) -> Lead:
     scoring = calculate_card_score(data)
     status = normalize_lead_status(data.get("status"))
+    # 支持导入时传入 _owner_id_override，否则使用当前用户
+    owner_id = data.get("_owner_id_override") if "_owner_id_override" in data else current_user.id
     return Lead(
         name=data["name"],
         company=data.get("company"),
@@ -134,7 +136,7 @@ def _new_lead_from_data(data: dict[str, Any], current_user: User) -> Lead:
         card_score=scoring.total_score,
         card_level=scoring.card_level,
         is_active=status_to_active(status),
-        owner_id=current_user.id,
+        owner_id=owner_id,
         score_detail_json=scoring.detail,
         custom_fields=data.get("custom_fields") or {},
         **scoring.dimensions,
@@ -143,6 +145,19 @@ def _new_lead_from_data(data: dict[str, Any], current_user: User) -> Lead:
 
 def _is_yes(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"是", "yes", "y", "true", "1", "通过", "pass", "passed"}
+
+
+async def _resolve_owner_id_by_name(db: AsyncSession, owner_name: str | None) -> str | None:
+    """
+    根据负责人姓名解析 owner_id。
+    如果系统中存在同名的已注册用户，返回该用户 id；否则返回 None。
+    """
+    text = str(owner_name or "").strip()
+    if not text:
+        return None
+    result = await db.execute(select(User).where(User.username == text))
+    user = result.scalar_one_or_none()
+    return str(user.id) if user else None
 
 
 def _is_no(value: str | None) -> bool:
@@ -185,6 +200,9 @@ def _lead_payload_from_import_row(row: dict[str, str], current_user: User) -> di
     if not unit_name:
         raise ValueError("单位名称必填")
 
+    # serial_no 不入库，只读取后丢弃
+    serial_no = row.get("serial_no")
+
     custom_fields = {
         "business_owner": row.get("business_owner") or "",
         "unit_name": unit_name,
@@ -205,7 +223,8 @@ def _lead_payload_from_import_row(row: dict[str, str], current_user: User) -> di
         "key_person_approved": row.get("key_person_approved") or "",
         "next_step_plan": row.get("next_step_plan") or "",
         "third_review_pass": row.get("third_review_pass") or "",
-        "import_owner_username": current_user.username,
+        "import_user_id": current_user.id,
+        "import_username": current_user.username,
     }
 
     return {
@@ -301,6 +320,15 @@ async def import_leads(
     for row in rows:
         try:
             payload = _lead_payload_from_import_row(row.values, current_user)
+
+            # 解析负责人：如果 Excel 中有负责人姓名，尝试绑定到已注册用户
+            owner_name = payload["custom_fields"].get("business_owner")
+            if owner_name:
+                # 尝试解析负责人 ID，如果未注册则保持 None
+                resolved_owner_id = await _resolve_owner_id_by_name(db, owner_name)
+                payload["_owner_id_override"] = resolved_owner_id
+                # resolved_owner_id 是 None 时表示负责人未注册，不要 fallback 到 current_user.id
+
             data = LeadCreate.model_validate(payload).model_dump(exclude_unset=True)
             db.add(_new_lead_from_data(data, current_user))
             created += 1
@@ -323,9 +351,9 @@ async def update_lead(
     lead_id: UUID,
     payload: LeadUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
-    lead = await _get_lead_or_403(lead_id, db, current_user)
+    lead = await _get_lead_or_404(lead_id, db)
     data = payload.model_dump(exclude_unset=True)
     _apply_lead_payload(lead, data)
 
@@ -345,6 +373,14 @@ async def delete_lead(
     await db.delete(lead)
     await db.commit()
     return MessageResponse(message="线索已删除")
+
+
+async def _get_lead_or_404(lead_id: UUID, db: AsyncSession) -> Lead:
+    result = await db.execute(select(Lead).where(Lead.id == str(lead_id)).options(selectinload(Lead.owner)))
+    lead = result.scalar_one_or_none()
+    if not lead:
+        raise HTTPException(status_code=404, detail="线索不存在")
+    return lead
 
 
 async def _get_lead_or_403(lead_id: UUID, db: AsyncSession, current_user: User) -> Lead:

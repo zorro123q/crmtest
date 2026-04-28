@@ -439,10 +439,7 @@ body{
     </div>
 
     <div class="content">
-      <div class="notice">
-        当前页面支持拖拽修改商机阶段。只有负责人本人或管理员可以操作卡片阶段变更；
-        “赢单”和“输单”会作为结果阶段单独统计。
-      </div>
+
 
       <section class="stats">
         <div class="stat-card">
@@ -525,7 +522,7 @@ function normalizeOpp(item) {
 }
 
 function canEditOpportunity(item) {
-  return CRMApp.canEditOwner(currentUser, item.ownerId);
+  return !!currentUser;
 }
 
 function getTypeClass(type) {
@@ -581,7 +578,7 @@ function renderSummary() {
     ' 个商机，活跃 ' + active.toLocaleString('zh-CN') +
     ' 个，赢单 ' + winCount.toLocaleString('zh-CN') +
     ' 个，输单 ' + lostCount.toLocaleString('zh-CN') +
-    ' 个；仅本人或管理员可拖拽更新阶段。';
+    ' 个；所有已登录用户均可拖拽更新阶段。';
 }
 
 function renderKanban() {
@@ -615,7 +612,7 @@ function renderKanban() {
       var ownerName = item.ownerName || '未分配';
       var ownerShort = ownerName.slice(0, 1).toUpperCase();
 
-      html += '<div class="kanban-card' + (editable ? '' : ' disabled') + '" style="border-left-color:' + stageColors[stage] + '" draggable="' + (editable ? 'true' : 'false') + '" data-opp-id="' + item.id + '" title="' + (editable ? '可拖拽更新阶段' : '仅负责人或管理员可拖拽') + '">';
+      html += '<div class="kanban-card' + (editable ? '' : ' disabled') + '" style="border-left-color:' + stageColors[stage] + '" draggable="' + (editable ? 'true' : 'false') + '" data-opp-id="' + item.id + '" title="' + (editable ? '可拖拽更新阶段' : '请先登录') + '">';
       html +=   '<div class="k-company">' + CRMApp.escapeHtml(item.company) + '</div>';
       html +=   '<div class="k-name">' + CRMApp.escapeHtml(item.name) + '</div>';
       html +=   '<div class="k-amount">' + formatAmount(item.amount) + '</div>';

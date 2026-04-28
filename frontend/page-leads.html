@@ -645,7 +645,7 @@ tbody tr:hover{
     <div class="topbar">
       <div>
         <h1>客户跟踪信息表</h1>
-        <p>按“客户基本信息收集 → 第一次初审 → 客户有效接触 → 第二次初审 → 获得认可 → 第三次初审”的流程记录客户推进情况。</p>
+        <p>按"客户基本信息收集 → 第一次初审 → 客户有效接触 → 第二次初审 → 获得认可 → 第三次初审"的流程记录客户推进情况。</p>
       </div>
       <div class="toolbar">
         <input class="search" id="search-input" type="text" placeholder="搜索商务负责人、单位名称、行业、需求、来源、关键人">
@@ -659,10 +659,6 @@ tbody tr:hover{
     </div>
 
     <div class="content">
-      <div class="notice">
-        当前页面严格按客户跟踪信息表逻辑保存数据。新增字段统一写入 custom_fields；
-        新建时始终新增记录，编辑时只按当前记录 id 更新，不会按名称覆盖其他记录。
-      </div>
 
       <section class="stats">
         <div class="stat-card">
@@ -691,7 +687,7 @@ tbody tr:hover{
         <div class="panel-head">
           <div>
             <h2>客户跟踪列表</h2>
-            <span>列表展示关键推进字段，点击“编辑/查看”可打开完整客户跟踪信息。</span>
+            <span>列表展示关键推进字段，点击"编辑/查看"可打开完整客户跟踪信息。</span>
           </div>
           <span id="result-count">0 条记录</span>
         </div>
@@ -941,9 +937,10 @@ function normalizeLead(item) {
   return {
     id: item.id,
     ownerId: item.owner_id || (item.owner && item.owner.id) || '',
-    ownerName: item.owner_username || (item.owner && item.owner.username) || '未分配',
+    // 负责人显示优先级：1. Excel导入原始负责人名 2. 系统owner_username 3. owner对象username
+    ownerName: custom.business_owner || item.owner_username || (item.owner && item.owner.username) || '未分配',
 
-    businessOwner: custom.business_owner || '',
+    businessOwner: custom.business_owner || item.owner_username || (item.owner && item.owner.username) || '',
     unitName: custom.unit_name || item.company || item.name || '',
     industryCategory: custom.industry_category || '',
     customerType: custom.customer_type || '',
@@ -973,6 +970,14 @@ function normalizeLead(item) {
     createdAt: item.created_at || '',
     raw: item
   };
+}
+
+function canEditLead() {
+  return !!currentUser;
+}
+
+function canDeleteLead(item) {
+  return CRMApp.canEditOwner(currentUser, item.ownerId);
 }
 
 function setUserUI() {
@@ -1072,7 +1077,8 @@ function renderTable() {
   empty.style.display = 'none';
 
   tbody.innerHTML = filteredLeads.map(function(item) {
-    var editable = CRMApp.canEditOwner(currentUser, item.ownerId);
+    var editable = canEditLead(item);
+    var deletable = canDeleteLead(item);
 
     return '<tr>' +
       '<td class="primary-cell">' +
@@ -1099,7 +1105,7 @@ function renderTable() {
       '<td>' + CRMApp.escapeHtml(formatDate(item.updatedAt)) + '</td>' +
       '<td><div class="action-group">' +
         '<button class="action-btn ' + (editable ? 'action-edit' : 'action-view') + '" onclick="openDetailModal(\'' + item.id + '\')">' + (editable ? '编辑' : '查看') + '</button>' +
-        (editable ? '<button class="action-btn action-delete" onclick="deleteLead(\'' + item.id + '\')">删除</button>' : '') +
+        (deletable ? '<button class="action-btn action-delete" onclick="deleteLead(\'' + item.id + '\')">删除</button>' : '') +
       '</div></td>' +
     '</tr>';
   }).join('');
@@ -1228,7 +1234,7 @@ function openDetailModal(id) {
   if (!item) return;
 
   editingLeadId = id;
-  var editable = CRMApp.canEditOwner(currentUser, item.ownerId);
+  var editable = canEditLead(item);
   currentMode = editable ? 'edit' : 'view';
 
   document.getElementById('modal-title').textContent = editable ? '编辑客户跟踪' : '查看客户跟踪';
@@ -1310,7 +1316,7 @@ async function saveLead() {
 
   if (currentMode === 'edit') {
     var existing = leads.find(function(entry) { return entry.id === editingLeadId; });
-    if (!existing || !CRMApp.canEditOwner(currentUser, existing.ownerId)) {
+    if (!existing || !canEditLead(existing)) {
       closeModal();
       return;
     }
@@ -1334,11 +1340,11 @@ async function saveLead() {
 
 async function deleteLead(id) {
   var existing = leads.find(function(entry) { return entry.id === id; });
-  if (!existing || !CRMApp.canEditOwner(currentUser, existing.ownerId)) {
+  if (!existing || !canDeleteLead(existing)) {
     return;
   }
 
-  var confirmed = window.confirm('确认删除客户“' + (existing.unitName || '未命名客户') + '”？删除后不可恢复。');
+  var confirmed = window.confirm('确认删除客户"' + (existing.unitName || '未命名客户') + '"？删除后不可恢复。');
   if (!confirmed) return;
 
   try {

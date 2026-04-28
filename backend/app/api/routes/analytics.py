@@ -217,7 +217,32 @@ async def analytics_overview(
     )
 
     # ------------------------------------------------------------------
-    # 5. 近 3 个月月度业绩（SQL 聚合）
+    # 5. 全量与导入可见性 KPI（SQL 聚合）
+    # ------------------------------------------------------------------
+    total_leads_count = (await db.execute(select(func.count(Lead.id)))).scalar() or 0
+    total_opportunities_count = (await db.execute(select(func.count(Opportunity.id)))).scalar() or 0
+    quarter_leads_created_count = (
+        await db.execute(
+            select(func.count(Lead.id)).where(
+                func.date(Lead.created_at).between(quarter_start, quarter_end)
+            )
+        )
+    ).scalar() or 0
+    quarter_opportunities_created_count = (
+        await db.execute(
+            select(func.count(Opportunity.id)).where(
+                func.date(Opportunity.created_at).between(quarter_start, quarter_end)
+            )
+        )
+    ).scalar() or 0
+    imported_opportunities_count = (
+        await db.execute(
+            select(func.count(Opportunity.id)).where(Opportunity.source == "import")
+        )
+    ).scalar() or 0
+
+    # ------------------------------------------------------------------
+    # 6. 近 3 个月月度业绩（SQL 聚合）
     # ------------------------------------------------------------------
     monthly_performance = []
     for offset in (-2, -1, 0):
@@ -265,13 +290,15 @@ async def analytics_overview(
         )
 
     # ------------------------------------------------------------------
-    # 6. 本周 owner 排行（SQL GROUP BY + 少量明细）
+    # 7. 本周 owner 排行（Python 分组，支持 custom_fields.owner_name_display）
     # ------------------------------------------------------------------
-    owner_ranking_rows = (
+    # 先取出本周赢单数据，然后 Python 分组（数据量小）
+    owner_ranking_source_rows = (
         await db.execute(
             select(
+                Opportunity.amount,
+                Opportunity.custom_fields,
                 User.username,
-                func.coalesce(func.sum(Opportunity.amount), 0).label("won_amount"),
             )
             .join(User, User.id == Opportunity.owner_id, isouter=True)
             .where(
@@ -286,17 +313,26 @@ async def analytics_overview(
                     ),
                 )
             )
-            .group_by(Opportunity.owner_id, User.username)
-            .order_by(func.sum(Opportunity.amount).desc())
         )
     ).all()
+
+    # Python 分组，优先使用 custom_fields.owner_name_display
+    ranking_map: dict[str, float] = {}
+    for row in owner_ranking_source_rows:
+        custom = row.custom_fields or {}
+        # 优先使用 Excel 导入的负责人原名，其次使用系统用户名
+        owner_name = str(custom.get("owner_name_display") or row.username or "未分配").strip()
+        if not owner_name:
+            owner_name = "未分配"
+        ranking_map[owner_name] = ranking_map.get(owner_name, 0) + float(row.amount or 0)
+
     owner_ranking = [
-        {"owner": row.username or "未分配", "won_amount": round(float(row.won_amount), 2)}
-        for row in owner_ranking_rows
+        {"owner": owner, "won_amount": round(amount, 2)}
+        for owner, amount in sorted(ranking_map.items(), key=lambda item: item[1], reverse=True)
     ]
 
     # ------------------------------------------------------------------
-    # 7. 近期动态（最新 5 条线索 + 5 条商机，限制结果集大小）
+    # 8. 近期动态（最新 5 条线索 + 5 条商机，限制结果集大小）
     # ------------------------------------------------------------------
     recent_leads = (
         await db.execute(
@@ -337,7 +373,7 @@ async def analytics_overview(
     )[:5]
 
     # ------------------------------------------------------------------
-    # 8. 客户漏斗（老/新客户，按季度，SQL 聚合）
+    # 9. 客户漏斗（老/新客户，按季度，SQL 聚合）
     # ------------------------------------------------------------------
     # 线索维度统计（本季度）
     quarter_leads_count = (
@@ -442,6 +478,11 @@ async def analytics_overview(
             "total_won_deals_this_week": won_this_week_count,
             "active_opportunities_count": active_opportunities_count,
             "average_win_rate": average_win_rate,
+            "total_leads_count": total_leads_count,
+            "total_opportunities_count": total_opportunities_count,
+            "quarter_leads_created_count": quarter_leads_created_count,
+            "quarter_opportunities_created_count": quarter_opportunities_created_count,
+            "imported_opportunities_count": imported_opportunities_count,
             "funnel_stages": dashboard_funnel,
             "monthly_performance": monthly_performance,
             "owner_ranking_this_week": owner_ranking,
