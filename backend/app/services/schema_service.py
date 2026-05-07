@@ -10,11 +10,19 @@ from app.db.session import engine
 from app.services.crm_rules_service import DEFAULT_OPPORTUNITY_STAGE
 
 
+USER_COLUMN_DEFINITIONS = {
+    "is_admin": "TINYINT(1) NOT NULL DEFAULT 0 AFTER password",
+}
+
 LEAD_COLUMN_DEFINITIONS = {
     "card_score": "INT NOT NULL DEFAULT 0 AFTER score",
     "card_level": "VARCHAR(1) NOT NULL DEFAULT 'E' AFTER card_score",
     "is_active": "TINYINT(1) NOT NULL DEFAULT 1 AFTER converted_to",
-    "industry": "VARCHAR(100) NULL AFTER is_active",
+    "review_status": "VARCHAR(30) NOT NULL DEFAULT 'pending' AFTER is_active",
+    "review_by": "VARCHAR(36) NULL AFTER review_status",
+    "review_at": "DATETIME NULL AFTER review_by",
+    "review_remark": "TEXT NULL AFTER review_at",
+    "industry": "VARCHAR(100) NULL AFTER review_remark",
     "industry_rank": "VARCHAR(100) NULL AFTER industry",
     "scene": "VARCHAR(120) NULL AFTER industry_rank",
     "budget": "VARCHAR(100) NULL AFTER scene",
@@ -36,7 +44,11 @@ OPPORTUNITY_COLUMN_DEFINITIONS = {
     "card_score": "INT NOT NULL DEFAULT 0 AFTER source",
     "card_level": "VARCHAR(1) NOT NULL DEFAULT 'E' AFTER card_score",
     "is_active": "TINYINT(1) NOT NULL DEFAULT 1 AFTER card_level",
-    "industry": "VARCHAR(100) NULL AFTER is_active",
+    "review_status": "VARCHAR(30) NOT NULL DEFAULT 'pending' AFTER is_active",
+    "review_by": "VARCHAR(36) NULL AFTER review_status",
+    "review_at": "DATETIME NULL AFTER review_by",
+    "review_remark": "TEXT NULL AFTER review_at",
+    "industry": "VARCHAR(100) NULL AFTER review_remark",
     "industry_rank": "VARCHAR(100) NULL AFTER industry",
     "scene": "VARCHAR(120) NULL AFTER industry_rank",
     "budget": "VARCHAR(100) NULL AFTER scene",
@@ -101,7 +113,7 @@ LEAD_FIXUP_STATEMENTS = [
     """,
     """
     UPDATE leads
-    SET is_active = IF(status = 'archived', FALSE, TRUE),
+    SET is_active = IF(review_status = 'approved' AND status <> 'archived', TRUE, FALSE),
         score_detail_json = COALESCE(score_detail_json, JSON_OBJECT())
     """,
 ]
@@ -199,8 +211,32 @@ OPPORTUNITY_FIXUP_STATEMENTS = [
     """,
     """
     UPDATE opportunities
-    SET is_active = IF(status = 'archived', FALSE, TRUE),
+    SET is_active = IF(review_status = 'approved' AND status <> 'archived', TRUE, FALSE),
         score_detail_json = COALESCE(score_detail_json, JSON_OBJECT())
+    """,
+]
+
+
+LEAD_REVIEW_INITIALIZE_STATEMENTS = [
+    """
+    UPDATE leads
+    SET review_status = CASE
+        WHEN LOWER(COALESCE(status, '')) IN ('archived', 'invalid', 'disqualified') THEN 'rejected'
+        WHEN LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(custom_fields, '$.first_review_pass')), '')) IN ('否', 'no', 'n', 'false', '0', '不通过', 'fail', 'failed') THEN 'rejected'
+        ELSE 'approved'
+    END
+    WHERE review_status = 'pending'
+    """,
+]
+
+OPPORTUNITY_REVIEW_INITIALIZE_STATEMENTS = [
+    """
+    UPDATE opportunities
+    SET review_status = CASE
+        WHEN LOWER(COALESCE(status, '')) = 'archived' THEN 'rejected'
+        ELSE 'approved'
+    END
+    WHERE review_status = 'pending'
     """,
 ]
 
@@ -210,18 +246,28 @@ async def _show_columns(conn, table_name: str) -> dict[str, str]:
     return {str(row[0]): str(row[1]).lower() for row in rows}
 
 
-async def _add_missing_columns(conn, table_name: str, existing: dict[str, str], definitions: dict[str, str]):
+async def _add_missing_columns(conn, table_name: str, existing: dict[str, str], definitions: dict[str, str]) -> set[str]:
+    added: set[str] = set()
     for column_name, definition in definitions.items():
         if column_name not in existing:
             await conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}"))
+            added.add(column_name)
+    return added
 
 
 async def ensure_runtime_schema():
     async with engine.begin() as conn:
+        user_columns = await _show_columns(conn, "users")
+        await _add_missing_columns(conn, "users", user_columns, USER_COLUMN_DEFINITIONS)
+        await conn.execute(text("UPDATE users SET is_admin = 1 WHERE username = 'admin'"))
+
         lead_columns = await _show_columns(conn, "leads")
         if lead_columns.get("status", "").startswith("enum("):
             await conn.execute(text("ALTER TABLE leads MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'new'"))
-        await _add_missing_columns(conn, "leads", lead_columns, LEAD_COLUMN_DEFINITIONS)
+        added_lead_columns = await _add_missing_columns(conn, "leads", lead_columns, LEAD_COLUMN_DEFINITIONS)
+        if "review_status" in added_lead_columns:
+            for statement in LEAD_REVIEW_INITIALIZE_STATEMENTS:
+                await conn.execute(text(statement))
         for statement in LEAD_FIXUP_STATEMENTS:
             await conn.execute(text(statement))
 
@@ -232,6 +278,14 @@ async def ensure_runtime_schema():
                 f"NOT NULL DEFAULT '{DEFAULT_OPPORTUNITY_STAGE}'"
             )
         )
-        await _add_missing_columns(conn, "opportunities", opportunity_columns, OPPORTUNITY_COLUMN_DEFINITIONS)
+        added_opportunity_columns = await _add_missing_columns(
+            conn,
+            "opportunities",
+            opportunity_columns,
+            OPPORTUNITY_COLUMN_DEFINITIONS,
+        )
+        if "review_status" in added_opportunity_columns:
+            for statement in OPPORTUNITY_REVIEW_INITIALIZE_STATEMENTS:
+                await conn.execute(text(statement))
         for statement in OPPORTUNITY_FIXUP_STATEMENTS:
             await conn.execute(text(statement))

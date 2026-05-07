@@ -41,6 +41,7 @@ class User(TimestampMixin, Base):
     id = Column(String(36), primary_key=True, default=uuid_str)
     username = Column(String(100), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
+    is_admin = Column(Boolean, nullable=False, default=False, server_default="0")
 
     opportunities = relationship("Opportunity", back_populates="owner", foreign_keys="Opportunity.owner_id")
     leads = relationship("Lead", back_populates="owner")
@@ -95,6 +96,10 @@ class Lead(TimestampMixin, Base):
     owner_id = Column(String(36), ForeignKey("users.id"))
     converted_to = Column(String(36))
     is_active = Column(Boolean, nullable=False, default=True)
+    review_status = Column(String(30), nullable=False, default="pending")
+    review_by = Column(String(36))
+    review_at = Column(DateTime(timezone=True))
+    review_remark = Column(Text)
 
     industry = Column(String(100))
     industry_rank = Column(String(100))
@@ -141,6 +146,10 @@ class Opportunity(TimestampMixin, Base):
     card_score = Column(Integer, nullable=False, default=0)
     card_level = Column(String(1), nullable=False, default="E")
     is_active = Column(Boolean, nullable=False, default=True)
+    review_status = Column(String(30), nullable=False, default="pending")
+    review_by = Column(String(36))
+    review_at = Column(DateTime(timezone=True))
+    review_remark = Column(Text)
 
     industry = Column(String(100))
     industry_rank = Column(String(100))

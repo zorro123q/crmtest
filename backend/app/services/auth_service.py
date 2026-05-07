@@ -75,7 +75,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> U
     return user
 
 
-async def create_user_account(db: AsyncSession, username: str, password: str) -> User:
+async def create_user_account(db: AsyncSession, username: str, password: str, is_admin: bool = False) -> User:
     """创建新用户账号，自动对密码做 bcrypt 哈希后存储。"""
     normalized_username = validate_username(username)
     raw_password = validate_password(password)
@@ -87,6 +87,7 @@ async def create_user_account(db: AsyncSession, username: str, password: str) ->
     user = User(
         username=normalized_username,
         password=hash_password(raw_password),
+        is_admin=is_admin or normalized_username == "admin",
     )
     db.add(user)
     try:

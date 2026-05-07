@@ -29,6 +29,22 @@ DEALLOCATE PREPARE stmt;
 
 ALTER TABLE users MODIFY COLUMN username VARCHAR(100) NOT NULL;
 
+SET @has_is_admin = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = @db_name
+      AND TABLE_NAME = 'users'
+      AND COLUMN_NAME = 'is_admin'
+);
+SET @add_is_admin_sql = IF(
+    @has_is_admin = 0,
+    'ALTER TABLE users ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0 AFTER password',
+    'SELECT 1'
+);
+PREPARE stmt FROM @add_is_admin_sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 SET @has_email = (
     SELECT COUNT(*)
     FROM information_schema.COLUMNS
@@ -140,6 +156,6 @@ PREPARE stmt FROM @add_unique_username_sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
-INSERT INTO users (id, username, password, created_at, updated_at)
-SELECT '10000000-0000-4000-8000-000000000001', 'admin', '123456', CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
+INSERT INTO users (id, username, password, is_admin, created_at, updated_at)
+SELECT '10000000-0000-4000-8000-000000000001', 'admin', '123456', 1, CURRENT_TIMESTAMP(6), CURRENT_TIMESTAMP(6)
 WHERE NOT EXISTS (SELECT 1 FROM users LIMIT 1);

@@ -7,6 +7,7 @@ CREATE TABLE users (
     id              CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     username        VARCHAR(100) NOT NULL,
     password        VARCHAR(255) NOT NULL,
+    is_admin        TINYINT(1) NOT NULL DEFAULT 0,
     created_at      DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at      DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     UNIQUE KEY uk_users_username (username)
@@ -132,8 +133,8 @@ CREATE TABLE metadata_fields (
     UNIQUE KEY uq_metadata_fields_object_field (object_name, field_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO users (id, username, password)
-SELECT '10000000-0000-4000-8000-000000000001', 'admin', '123456'
+INSERT INTO users (id, username, password, is_admin)
+SELECT '10000000-0000-4000-8000-000000000001', 'admin', '123456', 1
 WHERE NOT EXISTS (SELECT 1 FROM users LIMIT 1);
 
 INSERT INTO metadata_fields (object_name, field_name, display_name, field_type, is_required, is_visible, sort_order) VALUES

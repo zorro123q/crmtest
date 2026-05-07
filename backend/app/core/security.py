@@ -131,7 +131,7 @@ def verify_password(plain: str, stored: str) -> bool:
 
 
 def is_admin_user(user) -> bool:
-    return bool(user and getattr(user, "username", "") == "admin")
+    return bool(user and (getattr(user, "is_admin", False) or getattr(user, "username", "") == "admin"))
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:

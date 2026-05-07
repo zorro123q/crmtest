@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.security import apply_data_scope, can_edit_owned_resource, get_current_user
+from app.core.security import can_edit_owned_resource, get_current_user
 from app.db.session import get_db
 from app.models import Opportunity, User
 from app.schemas import (
@@ -180,6 +180,12 @@ def _merge_custom_fields(existing: dict | None, data: dict) -> dict:
     return merged
 
 
+def _is_active_for_review(review_status: str | None, status: str | None) -> bool:
+    if str(review_status or "").strip().lower() != "approved":
+        return False
+    return status_to_active(status or "new")
+
+
 def _apply_business_fields(opportunity: Opportunity, data: dict):
     for field_name in BUSINESS_FIELD_KEYS:
         if field_name in data:
@@ -247,7 +253,8 @@ def _new_opportunity_from_data(data: dict, current_user: User) -> Opportunity:
         close_date=data.get("close_date"),
         source=data.get("source"),
         status=status,
-        is_active=status_to_active(status),
+        is_active=False,
+        review_status="pending",
         card_score=scoring.total_score,
         card_level=scoring.card_level,
         score_detail_json=scoring.detail,
@@ -276,6 +283,15 @@ def _new_opportunity_from_data(data: dict, current_user: User) -> Opportunity:
 
     _sync_stage_state(opportunity, stage, now, override_probability=data.get("probability"))
     return opportunity
+
+
+def _validated_import_data(payload: dict) -> dict:
+    owner_override_present = "_owner_id_override" in payload
+    owner_id_override = payload.get("_owner_id_override")
+    data = OpportunityCreate.model_validate(payload).model_dump(exclude_unset=True)
+    if owner_override_present:
+        data["_owner_id_override"] = owner_id_override
+    return _normalize_business_payload(data)
 
 
 def _is_yes(value: str | None) -> bool:
@@ -435,18 +451,19 @@ async def list_opportunities(
     page_size: int = Query(20, ge=1, le=100),
     stage: Optional[str] = None,
     status: Optional[str] = None,
+    review_status: Optional[str] = None,
     owner_id: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
     query = select(Opportunity).options(selectinload(Opportunity.owner))
-    # 移除数据范围限制，允许所有用户查看所有商机
-    # query = apply_data_scope(query, Opportunity, current_user)
 
     if stage:
         query = query.where(Opportunity.stage == normalize_opportunity_stage(stage))
     if status:
         query = query.where(Opportunity.status == str(status).strip().lower())
+    if review_status:
+        query = query.where(Opportunity.review_status == str(review_status).strip().lower())
     if owner_id:
         query = query.where(Opportunity.owner_id == str(owner_id))
 
@@ -469,7 +486,7 @@ async def list_opportunities(
 @router.get("/funnel", summary="Opportunity funnel summary")
 async def funnel_summary(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    _: User = Depends(get_current_user),
 ):
     query = select(
         Opportunity.stage,
@@ -477,8 +494,6 @@ async def funnel_summary(
         func.coalesce(func.sum(Opportunity.amount), 0).label("total_amount"),
         func.avg(Opportunity.probability).label("avg_prob"),
     )
-    # 移除数据范围限制，允许所有用户查看全局漏斗数据
-    # query = apply_data_scope(query, Opportunity, current_user).group_by(Opportunity.stage)
     query = query.group_by(Opportunity.stage)
 
     result = await db.execute(query)
@@ -560,8 +575,7 @@ async def import_opportunities(
                 raw_payload["_owner_id_override"] = resolved_owner_id
                 # resolved_owner_id 是 None 时表示负责人未注册，不要 fallback 到 current_user.id
 
-            payload = OpportunityCreate.model_validate(raw_payload)
-            data = _normalize_business_payload(payload.model_dump(exclude_unset=True))
+            data = _validated_import_data(raw_payload)
             db.add(_new_opportunity_from_data(data, current_user))
             created += 1
         except Exception as exc:
@@ -583,9 +597,9 @@ async def update_opportunity(
     opp_id: UUID,
     payload: OpportunityUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    opportunity = await _get_opp_or_404(opp_id, db)
+    opportunity = await _get_opp_or_403(opp_id, db, current_user)
 
     raw_data = payload.model_dump(exclude_unset=True)
     data = _normalize_business_payload(raw_data)
@@ -615,7 +629,7 @@ async def update_opportunity(
     opportunity.card_level = scoring.card_level
     opportunity.score_detail_json = scoring.detail
     opportunity.status = str(next_status).strip().lower()
-    opportunity.is_active = status_to_active(opportunity.status)
+    opportunity.is_active = _is_active_for_review(opportunity.review_status, opportunity.status)
 
     if "stage" in data:
         _sync_stage_state(
@@ -643,13 +657,13 @@ async def move_stage(
     opp_id: UUID,
     payload: StageMoveRequest,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    opportunity = await _get_opp_or_404(opp_id, db)
+    opportunity = await _get_opp_or_403(opp_id, db, current_user)
     _sync_stage_state(opportunity, payload.stage, datetime.now(timezone.utc), override_closed_at=True)
     if opportunity.status != "archived":
         opportunity.status = derive_opportunity_status(opportunity.stage, opportunity.status)
-        opportunity.is_active = status_to_active(opportunity.status)
+        opportunity.is_active = _is_active_for_review(opportunity.review_status, opportunity.status)
 
     await db.commit()
     await db.refresh(opportunity)

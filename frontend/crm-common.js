@@ -3,13 +3,25 @@
   // 工具：API 基础地址
   // -----------------------------------------------------------------------
   function getApiBase() {
+    var params = new URLSearchParams(window.location.search);
+    var queryValue = params.get('apiBase');
+    if (queryValue) {
+      var normalizedQueryValue = queryValue.replace(/\/$/, '');
+      localStorage.setItem('crm_api_base', normalizedQueryValue);
+      return normalizedQueryValue;
+    }
+
     var saved = localStorage.getItem('crm_api_base');
     if (saved) {
       return saved.replace(/\/$/, '');
     }
-    if (window.location.protocol === 'file:' || ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1) {
+
+    var hostname = window.location.hostname;
+    var isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    if (window.location.protocol === 'file:' || (isLocalHost && window.location.port !== '8000')) {
       return 'http://127.0.0.1:8000';
     }
+
     return window.location.origin.replace(/\/$/, '');
   }
 
@@ -38,6 +50,18 @@
     return !!getCurrentUser() && !!getToken();
   }
 
+  function storeCurrentUser(user) {
+    if (!user) return;
+    localStorage.setItem('crm_user', JSON.stringify({
+      id: user.id,
+      username: user.username,
+      is_admin: user.is_admin === true,
+      loginTime: (getCurrentUser() && getCurrentUser().loginTime) || new Date().toISOString()
+    }));
+  }
+
+  var _authVerificationPromises = {};
+
   function clearAuth() {
     localStorage.removeItem('crm_user');
     localStorage.removeItem('crm_token');
@@ -52,6 +76,9 @@
   }
 
   function redirectToLogin() {
+    if ((window.location.pathname || '').split('/').pop() === 'login.html') {
+      return;
+    }
     window.location.href = 'login.html';
   }
 
@@ -87,7 +114,87 @@
       window.location.href = 'page-opportunities.html';
       return null;
     }
+    verifyAuthSession(permissionKey);
     return user;
+  }
+
+  function verifyAuthSession(permissionKey) {
+    var cacheKey = permissionKey || 'default';
+    if (_authVerificationPromises[cacheKey]) {
+      return _authVerificationPromises[cacheKey];
+    }
+
+    _authVerificationPromises[cacheKey] = (async function() {
+      var token = getToken();
+      if (!token) {
+        clearAuth();
+        redirectToLogin();
+        return null;
+      }
+
+      var path = permissionKey === 'user_management' ? '/api/admin/session' : '/api/auth/me';
+      var response;
+      try {
+        response = await fetch(getApiBase() + path, {
+          headers: {
+            Authorization: 'Bearer ' + token
+          }
+        });
+      } catch (error) {
+        clearAuth();
+        showToast('无法验证登录状态，请重新登录。', 'warning');
+        redirectToLogin();
+        return null;
+      }
+
+      var payload = null;
+      if (response.status !== 204) {
+        var text = await response.text();
+        if (text) {
+          try {
+            payload = JSON.parse(text);
+          } catch (e) {
+            payload = { message: text };
+          }
+        }
+      }
+
+      if (response.status === 401) {
+        clearAuth();
+        showToast('登录已过期，请重新登录。', 'warning');
+        redirectToLogin();
+        return null;
+      }
+
+      if (response.status === 403) {
+        if (permissionKey === 'user_management') {
+          showToast('只有管理员账号可以访问该页面。', 'error');
+          window.location.href = 'page-opportunities.html';
+          return null;
+        }
+        clearAuth();
+        redirectToLogin();
+        return null;
+      }
+
+      if (!response.ok) {
+        clearAuth();
+        showToast((payload && (payload.detail || payload.message)) || '登录状态校验失败，请重新登录。', 'warning');
+        redirectToLogin();
+        return null;
+      }
+
+      if (permissionKey === 'user_management' && !isAdmin(payload)) {
+        showToast('只有管理员账号可以访问该页面。', 'error');
+        window.location.href = 'page-opportunities.html';
+        return null;
+      }
+
+      storeCurrentUser(payload);
+      return payload;
+    })();
+
+    return _authVerificationPromises[cacheKey];
   }
 
   // -----------------------------------------------------------------------
@@ -164,7 +271,8 @@
         }
       }
       if (response.status >= 500) {
-        throw new Error('服务器错误（' + response.status + '），请联系管理员。');
+        // 优先显示后端返回的具体错误信息（如 AI 调用失败详情），无则返回通用提示
+        throw new Error(message && message !== '请求失败，请稍后重试' ? message : '服务器错误（' + response.status + '），请联系管理员。');
       }
 
       throw new Error(message);
@@ -205,6 +313,12 @@
    */
   function showToast(msg, type, duration) {
     if (!msg) return;
+    if (!document.body) {
+      setTimeout(function() {
+        showToast(msg, type, duration);
+      }, 0);
+      return;
+    }
     var t = type || 'info';
     var d = duration || 3000;
 
@@ -323,6 +437,7 @@
     redirectToDefault: redirectToDefault,
     redirectToLogin:  redirectToLogin,
     requireAuth:      requireAuth,
+    verifyAuthSession: verifyAuthSession,
     setAuthSession:   setAuthSession,
     showToast:        showToast
   };

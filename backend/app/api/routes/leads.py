@@ -66,6 +66,12 @@ def _merge_custom_fields(
     return merged
 
 
+def _is_active_for_review(review_status: str | None, status: str | None) -> bool:
+    if str(review_status or "").strip().lower() != "approved":
+        return False
+    return status_to_active(status or "new")
+
+
 def _apply_lead_payload(
     lead: Lead,
     data: dict[str, Any],
@@ -92,7 +98,7 @@ def _apply_lead_payload(
                 and lead.status != "new"
             ):
                 lead.status = normalized_status
-                lead.is_active = status_to_active(lead.status)
+                lead.is_active = _is_active_for_review(lead.review_status, lead.status)
 
     dimensions = _lead_dimensions_from_model(lead)
     for field_name in SCORING_FIELD_KEYS:
@@ -135,12 +141,22 @@ def _new_lead_from_data(data: dict[str, Any], current_user: User) -> Lead:
         score=scoring.total_score,
         card_score=scoring.total_score,
         card_level=scoring.card_level,
-        is_active=status_to_active(status),
+        is_active=False,
+        review_status="pending",
         owner_id=owner_id,
         score_detail_json=scoring.detail,
         custom_fields=data.get("custom_fields") or {},
         **scoring.dimensions,
     )
+
+
+def _validated_import_data(payload: dict[str, Any]) -> dict[str, Any]:
+    owner_override_present = "_owner_id_override" in payload
+    owner_id_override = payload.get("_owner_id_override")
+    data = LeadCreate.model_validate(payload).model_dump(exclude_unset=True)
+    if owner_override_present:
+        data["_owner_id_override"] = owner_id_override
+    return data
 
 
 def _is_yes(value: str | None) -> bool:
@@ -243,6 +259,7 @@ async def list_leads(
     page: int = Query(1, ge=1, description="页码，从 1 开始"),
     page_size: int = Query(20, ge=1, le=200, description="每页条数，最大 200"),
     status: Optional[str] = Query(None, description="按状态过滤"),
+    review_status: Optional[str] = Query(None, description="按管理员审核状态过滤"),
     owner_id: Optional[UUID] = Query(None, description="按归属人 ID 过滤"),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
@@ -256,6 +273,8 @@ async def list_leads(
 
     if status:
         query = query.where(Lead.status == normalize_lead_status(status))
+    if review_status:
+        query = query.where(Lead.review_status == str(review_status).strip().lower())
     if owner_id:
         query = query.where(Lead.owner_id == str(owner_id))
 
@@ -329,7 +348,7 @@ async def import_leads(
                 payload["_owner_id_override"] = resolved_owner_id
                 # resolved_owner_id 是 None 时表示负责人未注册，不要 fallback 到 current_user.id
 
-            data = LeadCreate.model_validate(payload).model_dump(exclude_unset=True)
+            data = _validated_import_data(payload)
             db.add(_new_lead_from_data(data, current_user))
             created += 1
         except Exception as exc:
@@ -351,9 +370,9 @@ async def update_lead(
     lead_id: UUID,
     payload: LeadUpdate,
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    lead = await _get_lead_or_404(lead_id, db)
+    lead = await _get_lead_or_403(lead_id, db, current_user)
     data = payload.model_dump(exclude_unset=True)
     _apply_lead_payload(lead, data)
 

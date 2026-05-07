@@ -3,7 +3,7 @@ Admin user management routes.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,15 @@ def serialize_user(user: User) -> UserOut:
     )
 
 
+async def count_admin_users(db: AsyncSession) -> int:
+    result = await db.execute(
+        select(func.count())
+        .select_from(User)
+        .where(or_(User.is_admin.is_(True), User.username == "admin"))
+    )
+    return int(result.scalar_one() or 0)
+
+
 @router.get("/users", response_model=list[UserOut], summary="用户列表")
 async def list_users(
     db: AsyncSession = Depends(get_db),
@@ -44,7 +53,7 @@ async def create_user(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_admin()),
 ):
-    user = await create_user_account(db, data.username, data.password)
+    user = await create_user_account(db, data.username, data.password, data.is_admin)
     return serialize_user(user)
 
 
@@ -72,6 +81,16 @@ async def update_user(
     if data.password is not None:
         user.password = hash_password(validate_password(data.password))
 
+    if data.is_admin is not None:
+        if user.username == "admin" and data.is_admin is False:
+            raise HTTPException(status_code=400, detail="默认 admin 账号必须保留管理员权限")
+        if is_admin_user(user) and data.is_admin is False and await count_admin_users(db) <= 1:
+            raise HTTPException(status_code=400, detail="至少需要保留一个管理员账号")
+        user.is_admin = data.is_admin
+
+    if user.username == "admin":
+        user.is_admin = True
+
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -96,8 +115,8 @@ async def delete_user(
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
 
-    if user.username == "admin":
-        raise HTTPException(status_code=400, detail="默认 admin 账号不可删除")
+    if is_admin_user(user) and await count_admin_users(db) <= 1:
+        raise HTTPException(status_code=400, detail="至少需要保留一个管理员账号")
 
     for model in (Account, Contact, Lead, Opportunity, Activity):
         await db.execute(update(model).where(model.owner_id == user_id).values(owner_id=None))

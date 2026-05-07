@@ -27,26 +27,163 @@ from app.services.scoring_service import (
 
 CRM_SYSTEM_PROMPT = """
 Role: You are a CRM extraction assistant.
-Task: Convert the raw transcript or note into a JSON object for CRM opportunity creation.
+Task: Convert the raw transcript or note into one JSON object for both CRM lead tracking and opportunity management.
 Output: Return JSON only, without markdown or explanation.
 
 Schema:
 {
-  "customer_name": "string",
-  "deal_value": 0,
-  "stage": "初步接触 | 方案报价 | 合同谈判 | 赢单 | 输单",
-  "key_needs": ["string"],
-  "next_step": "string",
-  "confidence_score": 0.0
+  "lead": {
+    "business_owner": "",
+    "unit_name": "",
+    "industry_category": "",
+    "customer_type": "",
+    "opportunity_level": "",
+    "requirement_desc": "",
+    "budget_amount": "",
+    "lead_source": "",
+    "purchased_related_products": "",
+    "visit_key_time": "",
+    "decision_chain_info": "",
+    "cooperation_intent": "",
+    "next_visit_plan": "",
+    "cooperation_scheme_status": "",
+    "key_person_approved": "",
+    "next_step_plan": ""
+  },
+  "opportunity": {
+    "owner_name_display": "",
+    "customer_name": "",
+    "customer_type": "",
+    "requirement_desc": "",
+    "product_name": "",
+    "amount": 0,
+    "estimated_cycle": "",
+    "opportunity_level": "",
+    "project_date": "",
+    "project_members": "",
+    "solution_communication": "",
+    "poc_status": "",
+    "key_person_approved": "",
+    "bid_probability": "",
+    "contract_negotiation": "",
+    "project_type": "",
+    "contract_signed": "",
+    "handoff_completed": ""
+  },
+  "confidence_score": 0.0,
+  "missing_fields": [],
+  "suggestion": ""
 }
 
 Rules:
-1. Use "Unknown" for missing strings, 0 for missing deal_value.
-2. stage must be one of the five allowed Chinese values.
-3. key_needs must be an array with at least one item.
-4. confidence_score must be between 0 and 1.
-5. Do not invent facts that are not supported by the text.
+1. Return every key exactly as shown. Use "" for missing strings, 0 for missing amount.
+2. Do not invent facts that are not supported by the text. If uncertain, leave the field blank.
+3. customer_type must be one of: 新客户, 老客户, 老客户新部门, or "".
+4. lead.opportunity_level must be one of: A, B, C, D, or "".
+5. opportunity.opportunity_level and bid_probability must be one of: A, B, C, D, E, or "".
+6. Yes/no fields must use 是, 否, 待确认 only when allowed. contract_signed, handoff_completed, purchased_related_products use only 是 or 否.
+7. opportunity.amount must be a number. Convert units such as 万 and 元 when explicit. For example 200万 -> 2000000.
+8. missing_fields is a list of field paths that cannot be determined, such as lead.unit_name or opportunity.product_name.
+9. confidence_score must be between 0 and 1.
 """.strip()
+
+
+LEAD_PARSE_FIELDS = (
+    "business_owner",
+    "unit_name",
+    "industry_category",
+    "customer_type",
+    "opportunity_level",
+    "requirement_desc",
+    "budget_amount",
+    "lead_source",
+    "purchased_related_products",
+    "visit_key_time",
+    "decision_chain_info",
+    "cooperation_intent",
+    "next_visit_plan",
+    "cooperation_scheme_status",
+    "key_person_approved",
+    "next_step_plan",
+)
+
+OPPORTUNITY_PARSE_FIELDS = (
+    "owner_name_display",
+    "customer_name",
+    "customer_type",
+    "requirement_desc",
+    "product_name",
+    "amount",
+    "estimated_cycle",
+    "opportunity_level",
+    "project_date",
+    "project_members",
+    "solution_communication",
+    "poc_status",
+    "key_person_approved",
+    "bid_probability",
+    "contract_negotiation",
+    "project_type",
+    "contract_signed",
+    "handoff_completed",
+)
+
+CUSTOMER_TYPE_ALIASES = {
+    "新客户": "新客户",
+    "新客": "新客户",
+    "老客户": "老客户",
+    "老客": "老客户",
+    "老客户新部门": "老客户新部门",
+    "老客新部门": "老客户新部门",
+}
+
+YES_NO_ALIASES = {
+    "是": "是",
+    "有": "是",
+    "已": "是",
+    "已采购": "是",
+    "已签订": "是",
+    "已完成": "是",
+    "认可": "是",
+    "通过": "是",
+    "yes": "是",
+    "y": "是",
+    "true": "是",
+    "1": "是",
+    "否": "否",
+    "无": "否",
+    "没有": "否",
+    "未": "否",
+    "未采购": "否",
+    "未签订": "否",
+    "未完成": "否",
+    "不认可": "否",
+    "不通过": "否",
+    "no": "否",
+    "n": "否",
+    "false": "否",
+    "0": "否",
+}
+
+YES_NO_PENDING_ALIASES = {
+    **YES_NO_ALIASES,
+    "待确认": "待确认",
+    "待定": "待确认",
+    "不确定": "待确认",
+    "确认中": "待确认",
+}
+
+PROJECT_TYPE_ALIASES = {
+    "saas": "SaaS",
+    "SaaS": "SaaS",
+    "定制化": "定制化项目",
+    "定制化项目": "定制化项目",
+    "集成": "集成项目",
+    "集成项目": "集成项目",
+    "运维": "运维服务",
+    "运维服务": "运维服务",
+    "其他": "其他",
+}
 
 
 _openai_client: AsyncOpenAI | None = None
@@ -358,6 +495,193 @@ def _extract_json_text(content: str) -> str:
     raise RuntimeError(f"model output is not valid JSON: {content[:300]}")
 
 
+def parse_amount_value(value: Any) -> float:
+    if value in (None, ""):
+        return 0
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip()
+    if not text:
+        return 0
+
+    normalized = re.sub(r"[,，￥¥元\s]", "", text)
+    if not normalized:
+        return 0
+
+    multiplier = 1.0
+    if normalized.endswith("万"):
+        multiplier = 10000.0
+        normalized = normalized[:-1]
+    elif normalized.endswith("亿"):
+        multiplier = 100000000.0
+        normalized = normalized[:-1]
+    elif normalized.endswith("千"):
+        multiplier = 1000.0
+        normalized = normalized[:-1]
+
+    match = re.search(r"-?\d+(?:\.\d+)?", normalized)
+    if not match:
+        return 0
+    try:
+        return float(match.group(0)) * multiplier
+    except ValueError:
+        return 0
+
+
+def _empty_lead_payload() -> dict[str, str]:
+    return {field_name: "" for field_name in LEAD_PARSE_FIELDS}
+
+
+def _empty_opportunity_payload() -> dict[str, str | float]:
+    payload: dict[str, str | float] = {field_name: "" for field_name in OPPORTUNITY_PARSE_FIELDS}
+    payload["amount"] = 0
+    return payload
+
+
+def _clean_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple)):
+        return "；".join(str(item).strip() for item in value if str(item).strip())
+    if isinstance(value, dict):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value).strip()
+
+
+def _normalize_enum(value: Any, aliases: dict[str, str], allowed: set[str]) -> str:
+    text = _clean_text(value)
+    if not text:
+        return ""
+    if text in aliases:
+        return aliases[text]
+    lower = text.lower()
+    if lower in aliases:
+        return aliases[lower]
+    upper = text.upper()
+    if upper in allowed:
+        return upper
+    return text if text in allowed else ""
+
+
+def _normalize_level(value: Any, allowed: set[str]) -> str:
+    text = _clean_text(value).upper()
+    return text if text in allowed else ""
+
+
+def _normalize_project_type(value: Any) -> str:
+    text = _clean_text(value)
+    if not text:
+        return ""
+    if text in PROJECT_TYPE_ALIASES:
+        return PROJECT_TYPE_ALIASES[text]
+    lower = text.lower()
+    if lower in PROJECT_TYPE_ALIASES:
+        return PROJECT_TYPE_ALIASES[lower]
+    return text if text in set(PROJECT_TYPE_ALIASES.values()) else ""
+
+
+def _legacy_parse_result(payload: dict[str, Any]) -> dict[str, Any]:
+    key_needs = payload.get("key_needs")
+    if isinstance(key_needs, list):
+        requirement_desc = "；".join(_clean_text(item) for item in key_needs if _clean_text(item))
+    else:
+        requirement_desc = _clean_text(key_needs)
+
+    customer_name = _clean_text(payload.get("customer_name"))
+    amount = parse_amount_value(payload.get("deal_value"))
+    next_step = _clean_text(payload.get("next_step"))
+    return {
+        "lead": {
+            "unit_name": customer_name,
+            "requirement_desc": requirement_desc,
+            "budget_amount": str(int(amount)) if amount else "",
+            "next_step_plan": next_step,
+        },
+        "opportunity": {
+            "customer_name": customer_name,
+            "requirement_desc": requirement_desc,
+            "amount": amount,
+            "contract_negotiation": next_step,
+        },
+        "confidence_score": payload.get("confidence_score", 0.5),
+        "missing_fields": [],
+        "suggestion": next_step,
+    }
+
+
+def normalize_crm_parse_result(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise RuntimeError("AI parse result is not a JSON object")
+
+    raw = payload if ("lead" in payload or "opportunity" in payload) else _legacy_parse_result(payload)
+    raw_lead = raw.get("lead") if isinstance(raw.get("lead"), dict) else {}
+    raw_opportunity = raw.get("opportunity") if isinstance(raw.get("opportunity"), dict) else {}
+
+    lead = _empty_lead_payload()
+    for field_name in LEAD_PARSE_FIELDS:
+        lead[field_name] = _clean_text(raw_lead.get(field_name))
+
+    opportunity = _empty_opportunity_payload()
+    for field_name in OPPORTUNITY_PARSE_FIELDS:
+        if field_name == "amount":
+            opportunity[field_name] = parse_amount_value(raw_opportunity.get(field_name))
+        else:
+            opportunity[field_name] = _clean_text(raw_opportunity.get(field_name))
+
+    lead["customer_type"] = _normalize_enum(lead["customer_type"], CUSTOMER_TYPE_ALIASES, {"新客户", "老客户", "老客户新部门"})
+    opportunity["customer_type"] = _normalize_enum(
+        opportunity["customer_type"],
+        CUSTOMER_TYPE_ALIASES,
+        {"新客户", "老客户", "老客户新部门"},
+    )
+    lead["opportunity_level"] = _normalize_level(lead["opportunity_level"], {"A", "B", "C", "D"})
+    opportunity["opportunity_level"] = _normalize_level(opportunity["opportunity_level"], {"A", "B", "C", "D", "E"})
+    opportunity["bid_probability"] = _normalize_level(opportunity["bid_probability"], {"A", "B", "C", "D", "E"})
+    lead["purchased_related_products"] = _normalize_enum(
+        lead["purchased_related_products"],
+        YES_NO_ALIASES,
+        {"是", "否"},
+    )
+    lead["key_person_approved"] = _normalize_enum(
+        lead["key_person_approved"],
+        YES_NO_PENDING_ALIASES,
+        {"是", "否", "待确认"},
+    )
+    opportunity["key_person_approved"] = _normalize_enum(
+        opportunity["key_person_approved"],
+        YES_NO_PENDING_ALIASES,
+        {"是", "否", "待确认"},
+    )
+    opportunity["contract_signed"] = _normalize_enum(opportunity["contract_signed"], YES_NO_ALIASES, {"是", "否"})
+    opportunity["handoff_completed"] = _normalize_enum(opportunity["handoff_completed"], YES_NO_ALIASES, {"是", "否"})
+    opportunity["project_type"] = _normalize_project_type(opportunity["project_type"])
+
+    try:
+        confidence_score = float(raw.get("confidence_score", 0.5))
+    except (TypeError, ValueError):
+        confidence_score = 0.5
+    confidence_score = max(0.0, min(1.0, confidence_score))
+
+    missing_fields = raw.get("missing_fields")
+    if not isinstance(missing_fields, list):
+        missing_fields = []
+    normalized_missing = [_clean_text(item) for item in missing_fields if _clean_text(item)]
+
+    for prefix, data in (("lead", lead), ("opportunity", opportunity)):
+        for field_name, value in data.items():
+            if value in ("", 0) and f"{prefix}.{field_name}" not in normalized_missing:
+                normalized_missing.append(f"{prefix}.{field_name}")
+
+    return {
+        "lead": lead,
+        "opportunity": opportunity,
+        "confidence_score": confidence_score,
+        "missing_fields": normalized_missing,
+        "suggestion": _clean_text(raw.get("suggestion")),
+    }
+
+
 def _build_scoring_dimensions_system_prompt(card_type: str) -> str:
     normalized_card_type = normalize_card_type(card_type)
     field_keys = get_scoring_field_keys(normalized_card_type)
@@ -438,7 +762,7 @@ async def parse_crm_text(raw_text: str) -> dict[str, Any]:
                 {"role": "user", "content": raw_text.strip()},
             ],
             temperature=0.1,
-            max_tokens=800,
+            max_tokens=1800,
         )
     except Exception as exc:
         raise RuntimeError(
@@ -448,30 +772,7 @@ async def parse_crm_text(raw_text: str) -> dict[str, Any]:
 
     content = response.choices[0].message.content or ""
     json_text = _extract_json_text(content)
-    result = json.loads(json_text)
-
-    result.setdefault("customer_name", "Unknown")
-    result.setdefault("deal_value", 0)
-    result.setdefault("stage", "初步接触")
-    result.setdefault("key_needs", [])
-    result.setdefault("next_step", "Unknown")
-    result.setdefault("confidence_score", 0.5)
-
-    if not isinstance(result.get("key_needs"), list):
-        result["key_needs"] = [str(result["key_needs"])] if result.get("key_needs") else []
-    if not result["key_needs"]:
-        result["key_needs"] = ["Unknown"]
-
-    try:
-        result["deal_value"] = int(float(result.get("deal_value", 0) or 0))
-    except Exception:
-        result["deal_value"] = 0
-
-    try:
-        result["confidence_score"] = float(result.get("confidence_score", 0.5))
-    except Exception:
-        result["confidence_score"] = 0.5
-    result["confidence_score"] = max(0.0, min(1.0, result["confidence_score"]))
+    result = normalize_crm_parse_result(json.loads(json_text))
 
     usage = getattr(response, "usage", None)
     result["_usage"] = {

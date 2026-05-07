@@ -7,17 +7,11 @@
 <style>
 :root{
   --primary:#0ea5e9;
-  --primary-light:#e0f2fe;
-  --accent:#0f766e;
-  --success:#10b981;
-  --warning:#f59e0b;
-  --danger:#ef4444;
   --bg:#f1f5f9;
   --surface:#ffffff;
   --border:#e2e8f0;
   --text:#1e293b;
   --text2:#64748b;
-  --text3:#94a3b8;
   --shadow:0 1px 3px rgba(15,23,42,.08),0 10px 22px rgba(15,23,42,.06);
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -25,60 +19,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
 .sidebar{width:236px;background:linear-gradient(180deg,#0f172a 0%,#1e3a5f 55%,#0f172a 100%);color:#cbd5e1;padding:22px 0}
 .logo{padding:0 20px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
 .logo-title{font-size:22px;font-weight:800;color:#fff}
-.logo-sub{font-size:12px;color:#94a3b8;margin-top:6px}
 .nav{padding:16px 12px 0}
 .nav-section{margin-bottom:10px}
 .nav-label{padding:0 12px 6px;font-size:10px;font-weight:700;color:#64748b;letter-spacing:1px;text-transform:uppercase}
 .nav a{display:flex;align-items:center;gap:10px;color:#94a3b8;text-decoration:none;padding:11px 12px;border-radius:12px;font-size:14px;margin-bottom:6px}
 .nav a:hover,.nav a.active{background:rgba(14,165,233,.14);color:#fff}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{background:linear-gradient(145deg,#ffffff,#f8fafc);border-bottom:1px solid var(--border);padding:18px 28px;display:flex;align-items:flex-start;gap:20px;justify-content:space-between}
-.topbar-title{font-size:20px;font-weight:800;color:var(--text)}
+.topbar{background:linear-gradient(145deg,#fff,#f8fafc);border-bottom:1px solid var(--border);padding:18px 28px;display:flex;align-items:flex-start;gap:20px;justify-content:space-between}
+.topbar-title{font-size:20px;font-weight:800}
 .topbar-sub{margin-top:6px;font-size:13px;color:var(--text2);line-height:1.6}
 .topbar-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .select,.btn{padding:10px 14px;border-radius:12px;font-size:14px;border:1px solid var(--border);background:#fff}
-.select:focus{outline:none;border-color:#7dd3fc;box-shadow:0 0 0 3px rgba(14,165,233,.12)}
 .btn{cursor:pointer;font-weight:700}
 .btn-primary{background:linear-gradient(135deg,#0ea5e9,#2563eb);color:#fff;border:none}
 .avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#0f766e);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700}
 .content{flex:1;overflow-y:auto;padding:24px}
-.notice{margin-bottom:18px;padding:16px 18px;border-radius:16px;background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;line-height:1.7;font-size:13px;box-shadow:var(--shadow)}
-.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-bottom:20px}
-.kpi-card{background:var(--surface);border-radius:18px;padding:18px;box-shadow:var(--shadow);border:1px solid var(--border)}
-.kpi-label{font-size:12px;color:var(--text3)}
-.kpi-value{margin-top:10px;font-size:28px;font-weight:800}
-.kpi-value.blue{color:var(--primary)}
-.kpi-value.green{color:var(--success)}
-.kpi-value.orange{color:var(--warning)}
-.kpi-value.teal{color:var(--accent)}
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px}
-.panel-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:16px}
+.notice{margin-bottom:18px;padding:14px 16px;border-radius:10px;background:#fffbeb;border:1px solid #f59e0b;color:#92400e;line-height:1.7;font-size:13px}
+.report-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.panel-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px}
 .panel-head h2{font-size:18px;font-weight:800}
 .panel-head span{font-size:13px;color:var(--text2)}
-.summary-meta{padding:18px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-.summary-item{padding:14px 16px;border-radius:16px;background:#f8fafc;border:1px solid var(--border)}
-.summary-item strong{display:block;font-size:12px;color:var(--text3);margin-bottom:6px}
-.summary-item span{font-size:18px;font-weight:800;color:var(--text)}
-.table-wrap{overflow:auto}
-.data-table{width:100%;border-collapse:collapse}
-.data-table th{background:#f8fafc;padding:14px 18px;text-align:left;font-size:12px;font-weight:800;color:var(--text2);border-bottom:1px solid var(--border)}
-.data-table td{padding:14px 18px;border-bottom:1px solid var(--border);font-size:13px}
-.empty-row td{text-align:center;color:var(--text2)}
-.tag{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}
-.tag-admin{background:#fef3c7;color:#92400e}
-.tag-user{background:#ecfeff;color:#0f766e}
-@media (max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+.table-wrap{overflow-x:auto;padding:16px;background:#fff8dc}
+.excel-table{width:100%;min-width:1260px;border-collapse:collapse;table-layout:fixed;background:#fffbe6}
+.excel-table th,.excel-table td{border:1px solid #111;padding:8px 10px;text-align:center;font-size:13px;line-height:1.4}
+.excel-table th{background:#fde68a;font-weight:800}
+.excel-table .metric-col{width:150px;background:#fcd34d}
+.excel-table .group-head{background:#fbbf24}
+.excel-table .target-head{background:#fef3c7}
+.excel-table .actual-head{background:#fde68a}
+.excel-table .metric-cell{background:#fef3c7;text-align:left;font-weight:800}
+.excel-table .target-cell{background:#fffdf3;color:#475569}
+.excel-table .actual-cell{background:#fff}
+.excel-table .revenue-row .metric-cell,.excel-table .revenue-row .target-cell,.excel-table .revenue-row .actual-cell{color:#b91c1c;font-weight:900}
+.empty{padding:28px;text-align:center;color:var(--text2)}
 @media (max-width:860px){
   body{display:block}
   .sidebar{width:100%;padding:14px}
   .nav{padding:16px 0 0}
-  .nav-section{margin-bottom:10px}
-  .nav a{margin:0 0 6px}
   .topbar{flex-direction:column;align-items:flex-start}
   .topbar-tools{justify-content:flex-start}
-  .kpi-grid,.summary-meta{grid-template-columns:repeat(2,1fr)}
+  .content{padding:16px}
 }
-@media (max-width:620px){.kpi-grid,.summary-meta{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -116,7 +97,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
   <div class="topbar">
     <div>
       <div class="topbar-title">商机通报</div>
-      <div class="topbar-sub" id="scope-text">正在为当前登录用户加载真实通报数据...</div>
+      <div class="topbar-sub" id="scope-text">正在加载目标/实际对照表...</div>
     </div>
     <div class="topbar-tools">
       <select class="select" id="user-filter" style="display:none"></select>
@@ -126,60 +107,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
   </div>
 
   <div class="content">
-    <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">负责人</div><div class="kpi-value teal" id="kpi-owner">-</div></div>
-      <div class="kpi-card"><div class="kpi-label">商机总数</div><div class="kpi-value blue" id="kpi-total">0</div></div>
-      <div class="kpi-card"><div class="kpi-label">跟进中</div><div class="kpi-value orange" id="kpi-following">0</div></div>
-      <div class="kpi-card"><div class="kpi-label">已赢单</div><div class="kpi-value green" id="kpi-won">0</div></div>
-      <div class="kpi-card"><div class="kpi-label">高优先级</div><div class="kpi-value teal" id="kpi-high">0</div></div>
-      <div class="kpi-card"><div class="kpi-label">本月新增</div><div class="kpi-value blue" id="kpi-month">0</div></div>
+    <div class="notice">
+      目标值暂按前端默认总目标和比例计算：老客户新业务总目标 0，新客户新老业务总目标 0；合同均额目标老客户 100，新客户 50。实际值来自后端实时商机数据。
     </div>
 
-    <section class="panel">
+    <section class="report-panel">
       <div class="panel-head">
         <div>
-          <h2>汇总</h2>
+          <h2>老客户新业务</h2>
         </div>
-        <span id="report-count">0 行</span>
+        <span id="old-updated">-</span>
       </div>
-      <div class="summary-meta">
-        <div class="summary-item">
-          <strong>统计范围</strong>
-          <span id="summary-scope">-</span>
-        </div>
-        <div class="summary-item">
-          <strong>本周新增</strong>
-          <span id="summary-week">0</span>
-        </div>
-        <div class="summary-item">
-          <strong>本月新增</strong>
-          <span id="summary-month">0</span>
-        </div>
-      </div>
+      <div class="table-wrap" id="old-table-wrap"></div>
     </section>
 
-    <section class="panel">
+    <section class="report-panel">
       <div class="panel-head">
         <div>
-          <h2>按用户统计</h2>
+          <h2>新客户新老业务</h2>
         </div>
+        <span id="new-updated">-</span>
       </div>
-      <div class="table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>负责人</th>
-              <th>总数</th>
-              <th>跟进中</th>
-              <th>已赢单</th>
-              <th>高优先级</th>
-              <th>本周新增</th>
-              <th>本月新增</th>
-            </tr>
-          </thead>
-          <tbody id="report-table"></tbody>
-        </table>
-      </div>
+      <div class="table-wrap" id="new-table-wrap"></div>
     </section>
   </div>
 </div>
@@ -190,6 +139,42 @@ var currentUser = CRMApp.requireAuth();
 var users = [];
 var currentReport = null;
 
+var OLD_TOTAL_TARGET = 0;
+var NEW_TOTAL_TARGET = 0;
+var OLD_AVG_CONTRACT_TARGET = 100;
+var NEW_AVG_CONTRACT_TARGET = 50;
+
+var PIONEER_GROUP_MEMBERS = [];
+var CHARGE_GROUP_MEMBERS = [];
+
+var GROUPS = [
+  { key: 'pioneer_leader', oldLabel: '先锋组组长：陈祺', newLabel: '先锋组组长：陈祺', oldRatio: 0.40, newRatio: 0.10 },
+  { key: 'pioneer_group', oldLabel: '先锋组：小组人员（组长自行分配）', newLabel: '先锋组：小组渠道对接人', oldRatio: 0, newRatio: 0.30 },
+  { key: 'charge_leader', oldLabel: '冲锋组组长：余浩然', newLabel: '冲锋组组长：余浩然', oldRatio: 0.30, newRatio: 0.20 },
+  { key: 'charge_group', oldLabel: '冲锋组：小组人员（组长自行分配）', newLabel: '冲锋组：小组渠道对接人', oldRatio: 0, newRatio: 0.30 },
+  { key: 'department', oldLabel: '部门（鑫健70%、春梅30%）', newLabel: '部门（鑫健70%、春梅30%）', oldRatio: 0.30, newRatio: 0.10 }
+];
+
+var OLD_METRICS = [
+  { key: 'collected_info_count', label: '收集信息数', type: 'count' },
+  { key: 'budget_count', label: '拿到预算数', type: 'count' },
+  { key: 'solution_approved_count', label: '方案认可数', type: 'count' },
+  { key: 'signed_count', label: '签约数', type: 'count' },
+  { key: 'average_contract_amount', label: '合同均额', type: 'amount', average: true },
+  { key: 'recognized_revenue', label: '确收额', type: 'amount', revenue: true }
+];
+
+var NEW_METRICS = [
+  { key: 'collected_info_count', label: '收集信息数', type: 'count' },
+  { key: 'valid_contact_count', label: '有效接触数', type: 'count' },
+  { key: 'approval_count', label: '获得认可数', type: 'count' },
+  { key: 'budget_count', label: '拿到预算数', type: 'count' },
+  { key: 'solution_approved_count', label: '方案认可数', type: 'count' },
+  { key: 'signed_count', label: '签约数', type: 'count' },
+  { key: 'average_contract_amount', label: '合同均额', type: 'amount', average: true },
+  { key: 'recognized_revenue', label: '确收额', type: 'amount', revenue: true }
+];
+
 function setUserUI() {
   document.getElementById('user-avatar').textContent = (currentUser.username || 'U').charAt(0).toUpperCase();
 }
@@ -198,52 +183,89 @@ function setScopeText(text) {
   document.getElementById('scope-text').textContent = text;
 }
 
-function renderSummary(summary, scope) {
-  document.getElementById('kpi-owner').textContent = summary.owner_username || '-';
-  document.getElementById('kpi-total').textContent = Number(summary.total_count || 0).toLocaleString('zh-CN');
-  document.getElementById('kpi-following').textContent = Number(summary.following_count || 0).toLocaleString('zh-CN');
-  document.getElementById('kpi-won').textContent = Number(summary.won_count || 0).toLocaleString('zh-CN');
-  document.getElementById('kpi-high').textContent = Number(summary.high_priority_count || 0).toLocaleString('zh-CN');
-  document.getElementById('kpi-month').textContent = Number(summary.this_month_new || 0).toLocaleString('zh-CN');
-  document.getElementById('summary-week').textContent = Number(summary.this_week_new || 0).toLocaleString('zh-CN');
-  document.getElementById('summary-month').textContent = Number(summary.this_month_new || 0).toLocaleString('zh-CN');
-
-  var scopeMap = {
-    me: '当前用户',
-    user: '单用户筛选',
-    all: '全部用户'
-  };
-  document.getElementById('summary-scope').textContent = scopeMap[scope] || scope || '-';
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 }
 
-function renderTable(reports) {
-  var tbody = document.getElementById('report-table');
-  var rows = reports || [];
-  document.getElementById('report-count').textContent = rows.length + ' 行';
+function formatAmount(value) {
+  return '￥' + Number(value || 0).toLocaleString('zh-CN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  });
+}
 
-  if (!rows.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="7">暂无通报数据</td></tr>';
-    return;
+function formatValue(value, metric) {
+  return metric.type === 'amount' ? formatAmount(value) : formatNumber(value);
+}
+
+function getTargetValue(moduleKey, group, metric) {
+  if (metric.average) {
+    return moduleKey === 'old' ? OLD_AVG_CONTRACT_TARGET : NEW_AVG_CONTRACT_TARGET;
   }
+  var totalTarget = moduleKey === 'old' ? OLD_TOTAL_TARGET : NEW_TOTAL_TARGET;
+  var ratio = moduleKey === 'old' ? group.oldRatio : group.newRatio;
+  return Number((totalTarget * ratio).toFixed(2));
+}
 
-  tbody.innerHTML = rows.map(function(row) {
-    var isAdminUser = row.owner_username === 'admin';
-    return '<tr>' +
-      '<td><span class="tag ' + (isAdminUser ? 'tag-admin' : 'tag-user') + '">' + CRMApp.escapeHtml(row.owner_username || '未分配') + '</span></td>' +
-      '<td>' + Number(row.total_count || 0).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + Number(row.following_count || 0).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + Number(row.won_count || 0).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + Number(row.high_priority_count || 0).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + Number(row.this_week_new || 0).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + Number(row.this_month_new || 0).toLocaleString('zh-CN') + '</td>' +
-      '</tr>';
+function renderTargetTable(options) {
+  var moduleData = options.data || {};
+  var moduleKey = options.moduleKey;
+  var metrics = options.metrics;
+  var labelKey = moduleKey === 'old' ? 'oldLabel' : 'newLabel';
+
+  var headerTop = '<tr><th class="metric-col" rowspan="2">指标</th>' + GROUPS.map(function(group) {
+    return '<th class="group-head" colspan="2">' + CRMApp.escapeHtml(group[labelKey]) + '</th>';
+  }).join('') + '</tr>';
+
+  var headerBottom = '<tr>' + GROUPS.map(function() {
+    return '<th class="target-head">目标</th><th class="actual-head">实际</th>';
+  }).join('') + '</tr>';
+
+  var body = metrics.map(function(metric) {
+    var rowClass = metric.revenue ? ' class="revenue-row"' : '';
+    return '<tr' + rowClass + '>' +
+      '<td class="metric-cell">' + CRMApp.escapeHtml(metric.label) + '</td>' +
+      GROUPS.map(function(group) {
+        var groupMetrics = moduleData[group.key] || {};
+        var target = getTargetValue(moduleKey, group, metric);
+        var actual = groupMetrics[metric.key] || 0;
+        return '<td class="target-cell">' + formatValue(target, metric) + '</td>' +
+          '<td class="actual-cell">' + formatValue(actual, metric) + '</td>';
+      }).join('') +
+    '</tr>';
   }).join('');
+
+  return '<table class="excel-table"><thead>' + headerTop + headerBottom + '</thead><tbody>' + body + '</tbody></table>';
+}
+
+function renderReport(payload) {
+  currentReport = payload || {};
+  document.getElementById('old-table-wrap').innerHTML = renderTargetTable({
+    moduleKey: 'old',
+    data: currentReport.old_customer_new_business || {},
+    metrics: OLD_METRICS
+  });
+  document.getElementById('new-table-wrap').innerHTML = renderTargetTable({
+    moduleKey: 'new',
+    data: currentReport.new_customer_business || {},
+    metrics: NEW_METRICS
+  });
+  var timestamp = '更新时间：' + new Date().toLocaleString('zh-CN');
+  document.getElementById('old-updated').textContent = timestamp;
+  document.getElementById('new-updated').textContent = timestamp;
+}
+
+function appendMemberParams(params) {
+  PIONEER_GROUP_MEMBERS.forEach(function(name) {
+    if (name) params.append('pioneer_members', name);
+  });
+  CHARGE_GROUP_MEMBERS.forEach(function(name) {
+    if (name) params.append('charge_members', name);
+  });
 }
 
 async function loadUsersIfAdmin() {
-  if (!CRMApp.isAdmin(currentUser)) {
-    return;
-  }
+  if (!CRMApp.isAdmin(currentUser)) return;
 
   users = await CRMApp.apiRequest('/api/admin/users');
   var select = document.getElementById('user-filter');
@@ -255,39 +277,36 @@ async function loadUsersIfAdmin() {
 
 async function loadReport() {
   try {
-    setScopeText('正在加载实时商机通报数据...');
-    var payload;
+    setScopeText('正在加载目标/实际对照表...');
+    var params = new URLSearchParams();
+    appendMemberParams(params);
 
     if (CRMApp.isAdmin(currentUser)) {
       var selectedUserId = document.getElementById('user-filter').value || 'all';
-      if (selectedUserId === 'all') {
-        payload = await CRMApp.apiRequest('/api/opportunity-report');
-        setScopeText('管理员范围：全部用户');
+      if (selectedUserId !== 'all') {
+        params.set('user_id', selectedUserId);
+      }
+    }
+
+    var query = params.toString();
+    var payload = await CRMApp.apiRequest('/api/opportunity-report/target-table' + (query ? '?' + query : ''));
+    renderReport(payload);
+
+    if (CRMApp.isAdmin(currentUser)) {
+      var selected = document.getElementById('user-filter').value || 'all';
+      if (selected === 'all') {
+        setScopeText('管理员范围：全部用户；仅统计已审核通过商机（旧库无 review_status 字段时自动兼容）。');
       } else {
-        payload = await CRMApp.apiRequest('/api/opportunity-report?user_id=' + encodeURIComponent(selectedUserId));
-        var selectedUser = users.find(function(user) { return user.id === selectedUserId; });
+        var selectedUser = users.find(function(user) { return user.id === selected; });
         setScopeText('管理员范围：' + (selectedUser ? selectedUser.username : '所选用户'));
       }
     } else {
-      payload = await CRMApp.apiRequest('/api/opportunity-report/me');
       setScopeText('当前用户范围：' + currentUser.username);
     }
-
-    currentReport = payload || { summary: {}, reports: [] };
-    renderSummary(currentReport.summary || {}, currentReport.scope || 'me');
-    renderTable(currentReport.reports || []);
   } catch (error) {
-      setScopeText(error.message || '加载商机通报失败。');
-    renderSummary({
-      owner_username: '-',
-      total_count: 0,
-      following_count: 0,
-      won_count: 0,
-      high_priority_count: 0,
-      this_week_new: 0,
-      this_month_new: 0
-    }, '-');
-    renderTable([]);
+    setScopeText(error.message || '加载商机通报失败。');
+    document.getElementById('old-table-wrap').innerHTML = '<div class="empty">暂无数据</div>';
+    document.getElementById('new-table-wrap').innerHTML = '<div class="empty">暂无数据</div>';
   }
 }
 

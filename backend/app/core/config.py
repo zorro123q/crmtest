@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     PARAFORMER_MODEL: str = "paraformer-v2"
     PARAFORMER_LANGUAGE_HINTS: str = '["zh", "en"]'
 
+    XFYUN_REALTIME_APP_ID: str ="pc20onli"
+    XFYUN_REALTIME_API_KEY: str = "d9f4aa7ea6d94faca62cd88a28fd5234"
+    XFYUN_REALTIME_TOKEN: str = "10003"
+    XFYUN_REALTIME_WS_URL: str = "wss://multirobot-test.kxjlcc.com"
+    XFYUN_REALTIME_PUNC: str = "1"
+    XFYUN_REALTIME_ENG_LANG_TYPE: str = "1"
+
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # 管理员默认密码，生产环境请务必在 .env 中设置强密码

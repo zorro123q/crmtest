@@ -693,23 +693,23 @@ tbody tr:last-child td{
             <div class="panel-title">2. AI分析区</div>
             <div class="panel-subtitle">可录音转写或直接编辑文本。点击"AI识别评价维度"后，只更新 AI 识别结果，不直接展示最终评分。</div>
           </div>
-          <div class="status-text" id="a-ai-status">No reusable AI cache is available.</div>
+          <div class="status-text" id="a-ai-status">暂无可复用的 AI 缓存。</div>
         </div>
         <div class="panel-body">
           <div class="record-layout">
             <div class="record-box">
-              <button type="button" class="record-btn" data-record-key="a">Start Recording</button>
+              <button type="button" class="record-btn" data-record-key="a">开始录音</button>
               <div class="record-status">
-                Recording
+                录音中
                 <strong id="a-record-timer">00:00</strong>
-                <span id="a-record-hint">Click to start recording. Click again to stop and transcribe.</span>
+                <span id="a-record-hint">点击开始录音，再次点击结束并转写。</span>
               </div>
             </div>
             <div>
               <div class="form-group">
                 <label class="form-label" for="a-text">AI分析文本</label>
                 <textarea class="form-textarea" id="a-text" placeholder="可粘贴会议纪要、跟进记录、转写结果，或直接描述客户情况。"></textarea>
-                <div class="input-note">Text edits invalidate the cached AI dimensions immediately.</div>
+                <div class="input-note">编辑文本会立即清除已缓存的 AI 识别结果。</div>
               </div>
               <div class="button-row">
                 <button type="button" class="btn btn-primary" data-ai-identify="a">AI识别评价维度</button>
@@ -717,7 +717,7 @@ tbody tr:last-child td{
               </div>
             </div>
           </div>
-          <div class="hint-banner">AI output is restricted to the official scoring enum values only.</div>
+          <div class="hint-banner">AI 输出仅限于正式评分枚举值，不会生成其他内容。</div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -765,7 +765,11 @@ tbody tr:last-child td{
             <button type="button" class="btn btn-primary" data-evaluate-key="a">开始评估</button>
             <button type="button" class="btn btn-ghost" data-reset-key="a">清空A卡内容</button>
           </div>
-          <div id="a-result-zone" class="empty-state">No evaluation result yet. Add text or manual dimensions and run an evaluation.</div>
+          <label class="form-label" style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <input type="checkbox" id="a-save-to-lead">
+            将评估明细保存到线索管理表
+          </label>
+          <div id="a-result-zone" class="empty-state">暂无评估结果。请输入文本或手动录入维度，然后点击"开始评估"。</div>
         </div>
       </article>
     </div>
@@ -802,23 +806,23 @@ tbody tr:last-child td{
             <div class="panel-title">2. AI分析区</div>
             <div class="panel-subtitle">录音转写、文本编辑和 AI 正式维度识别都在这里完成，结果按文本一致性缓存。</div>
           </div>
-          <div class="status-text" id="b-ai-status">No reusable AI cache is available.</div>
+          <div class="status-text" id="b-ai-status">暂无可复用的 AI 缓存。</div>
         </div>
         <div class="panel-body">
           <div class="record-layout">
             <div class="record-box">
-              <button type="button" class="record-btn" data-record-key="b">Start Recording</button>
+              <button type="button" class="record-btn" data-record-key="b">开始录音</button>
               <div class="record-status">
-                Recording
+                录音中
                 <strong id="b-record-timer">00:00</strong>
-                <span id="b-record-hint">Click to start recording. Click again to stop and transcribe.</span>
+                <span id="b-record-hint">点击开始录音，再次点击结束并转写。</span>
               </div>
             </div>
             <div>
               <div class="form-group">
                 <label class="form-label" for="b-text">AI分析文本</label>
                 <textarea class="form-textarea" id="b-text" placeholder="可粘贴商机纪要、客户反馈、招采信息、方案沟通记录等。"></textarea>
-                <div class="input-note">Text edits invalidate the cached AI dimensions immediately.</div>
+                <div class="input-note">编辑文本会立即清除已缓存的 AI 识别结果。</div>
               </div>
               <div class="button-row">
                 <button type="button" class="btn btn-primary" data-ai-identify="b">AI识别评价维度</button>
@@ -826,7 +830,7 @@ tbody tr:last-child td{
               </div>
             </div>
           </div>
-          <div class="hint-banner">AI output is restricted to the official scoring enum values only.</div>
+          <div class="hint-banner">AI 输出仅限于正式评分枚举值，不会生成其他内容。</div>
           <div class="table-wrap">
             <table>
               <thead>
@@ -874,7 +878,7 @@ tbody tr:last-child td{
             <button type="button" class="btn btn-primary" data-evaluate-key="b">开始评估</button>
             <button type="button" class="btn btn-ghost" data-reset-key="b">清空B卡内容</button>
           </div>
-          <div id="b-result-zone" class="empty-state">No evaluation result yet. Add text or manual dimensions and run an evaluation.</div>
+          <div id="b-result-zone" class="empty-state">暂无评估结果。请输入文本或手动录入维度，然后点击"开始评估"。</div>
         </div>
       </article>
     </div>
@@ -884,7 +888,7 @@ tbody tr:last-child td{
 <div class="loading" id="loading">
   <div class="loading-card">
     <div class="spinner"></div>
-    <div id="loadingText">Working...</div>
+    <div id="loadingText">处理中...</div>
   </div>
 </div>
 
@@ -911,7 +915,7 @@ tbody tr:last-child td{
   };
 
   const EMPTY_RESULT_HTML =
-    '<div class="empty-state">No evaluation result yet. Add text or manual dimensions and run an evaluation.</div>';
+    '<div class="empty-state">暂无评估结果。请输入文本或手动录入维度，然后点击"开始评估"。</div>';
 
   /**
    * B卡新评价维度：商机转合同 11 维度模型
@@ -1068,13 +1072,13 @@ tbody tr:last-child td{
   }
 
   function showLoading(message) {
-    document.getElementById("loadingText").textContent = message || "Working...";
+    document.getElementById("loadingText").textContent = message || "处理中...";
     document.getElementById("loading").classList.add("show");
   }
 
   function hideLoading() {
     document.getElementById("loading").classList.remove("show");
-    document.getElementById("loadingText").textContent = "Working...";
+    document.getElementById("loadingText").textContent = "处理中...";
   }
 
   function showToast(message) {
@@ -1123,7 +1127,7 @@ tbody tr:last-child td{
 
     if (!fields.length) {
       container.innerHTML =
-        '<div class="empty-state">Formal scoring fields failed to load. Manual input is unavailable.</div>';
+        '<div class="empty-state">正式评分字段加载失败，手动录入暂不可用。</div>';
       return;
     }
 
@@ -1136,7 +1140,7 @@ tbody tr:last-child td{
             id="${cardKey}-field-${escapeHtml(field.field)}"
             data-score-field="${escapeHtml(field.field)}"
           >
-            <option value="">Not selected</option>
+            <option value="">未选择</option>
             ${field.options.map((option) => `
               <option value="${escapeHtml(option.value)}">${escapeHtml(option.label)} (${option.score})</option>
             `).join("")}
@@ -1162,7 +1166,7 @@ tbody tr:last-child td{
         .filter((dimension) => dimension.source === "ai")
         .map((dimension) => ({
           name: dimension.name,
-          selected_label: dimension.selected_label || "Not identified",
+          selected_label: dimension.selected_label || "未识别",
           score: dimension.score
         }));
     }
@@ -1190,14 +1194,14 @@ tbody tr:last-child td{
 
     if (!rows.length) {
       tbody.innerHTML =
-        '<tr><td colspan="3"><div class="empty-state">No AI dimensions yet. Prepare text first, then run AI extraction.</div></td></tr>';
+        '<tr><td colspan="3"><div class="empty-state">暂无 AI 识别结果，请先准备好文本再运行 AI 提取。</div></td></tr>';
       return;
     }
 
     tbody.innerHTML = rows.map((dimension) => `
       <tr>
         <td>${escapeHtml(dimension.name)}</td>
-        <td>${escapeHtml(dimension.selected_label || "Not identified")}</td>
+        <td>${escapeHtml(dimension.selected_label || "未识别")}</td>
         <td>${formatScore(dimension.score)}</td>
       </tr>
     `).join("");
@@ -1214,44 +1218,51 @@ tbody tr:last-child td{
     resultZone.innerHTML = `
       <div class="summary-grid">
         <div class="summary-card">
-          <div class="summary-label">Total Score</div>
+          <div class="summary-label">总分</div>
           <div class="summary-value">${formatScore(response.normalized_score)}</div>
         </div>
         <div class="summary-card">
-          <div class="summary-label">Card Level</div>
+          <div class="summary-label">卡片等级</div>
           <div class="summary-grade">${escapeHtml(response.grade)}</div>
         </div>
         <div class="summary-card">
-          <div class="summary-label">Rating Label</div>
+          <div class="summary-label">评级说明</div>
           <div class="summary-value" style="font-size:18px;line-height:1.4;">${escapeHtml(response.grade_label)}</div>
         </div>
       </div>
 
       <div class="note-box">
-        <strong>Rating Description</strong>
+        <strong>评级描述</strong>
         <p>${escapeHtml(response.rating_desc || "-")}</p>
       </div>
 
       <div class="note-box">
-        <strong>Follow-up Suggestion</strong>
+        <strong>跟进建议</strong>
         <p>${escapeHtml(response.suggestion || "-")}</p>
       </div>
+
+      ${response.lead_id ? `
+        <div class="note-box">
+          <strong>线索保存结果</strong>
+          <p>${escapeHtml(response.merged_existing_lead ? "已合并到已有线索" : "已新建线索并保存评估明细")}：${escapeHtml(response.lead_id)}</p>
+        </div>
+      ` : ""}
 
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Dimension</th>
-              <th>Selected Value</th>
-              <th>Score</th>
-              <th>Source</th>
+              <th>维度</th>
+              <th>选中值</th>
+              <th>得分</th>
+              <th>来源</th>
             </tr>
           </thead>
           <tbody>
             ${(response.dimensions || []).map((dimension) => `
               <tr>
                 <td>${escapeHtml(dimension.name)}</td>
-                <td>${escapeHtml(dimension.selected_label || "Not selected")}</td>
+                <td>${escapeHtml(dimension.selected_label || "未选择")}</td>
                 <td>${formatScore(dimension.score)} / ${formatScore(dimension.max_score)}</td>
                 <td>${buildSourceTag(dimension.source)}</td>
               </tr>
@@ -1274,12 +1285,12 @@ tbody tr:last-child td{
     const cardState = state.cards[cardKey];
     if (cardState.aiDimensions && getText(cardKey) === cardState.aiSourceText) {
       statusEl.className = "status-text ready";
-      statusEl.textContent = "AI cache is valid and can be reused.";
+      statusEl.textContent = "AI 缓存有效，可复用。";
       return;
     }
 
     statusEl.className = "status-text";
-    statusEl.textContent = "No reusable AI cache is available.";
+    statusEl.textContent = "暂无可复用的 AI 缓存。";
   }
 
   function clearAiCache(cardKey, message) {
@@ -1329,6 +1340,9 @@ tbody tr:last-child td{
         ? Number(document.getElementById(config.amountId).value)
         : null
     };
+    if (cardKey === "a") {
+      payload.save_to_lead = document.getElementById("a-save-to-lead").checked;
+    }
 
     if (mode === "manual" || mode === "hybrid") {
       payload.manual_dimensions = collectManualDimensions(cardKey);
@@ -1360,11 +1374,11 @@ tbody tr:last-child td{
     const text = getText(cardKey);
 
     if (!text) {
-      showToast("Enter or transcribe text before running AI extraction.");
+      showToast("请先输入或转写文本再运行 AI 识别。");
       return;
     }
 
-    showLoading("Running AI extraction...");
+    showLoading("正在运行 AI 识别...");
     try {
       const response = await CRMApp.apiRequest(API.evaluate, {
         method: "POST",
@@ -1388,11 +1402,11 @@ tbody tr:last-child td{
       state.cards[cardKey].aiDimensions = response.ai_dimensions;
       state.cards[cardKey].aiSourceText = text;
       renderAiPreview(cardKey, response);
-      updateAiStatus(cardKey, "AI dimensions refreshed and cached for reuse.", false);
-      showToast("AI extraction completed.");
+      updateAiStatus(cardKey, "AI 维度已刷新并缓存，可复用。", false);
+      showToast("AI 识别完成。");
     } catch (error) {
       clearAiCache(cardKey);
-      showToast(error.message || "AI extraction failed.");
+      showToast(error.message || "AI 识别失败，请检查网络连接或联系管理员。");
     } finally {
       hideLoading();
     }
@@ -1408,30 +1422,39 @@ tbody tr:last-child td{
     const manualValues = payload.manual_dimensions || {};
 
     if (mode === "manual" && !hasAnyDimensionValue(manualValues, cardKey)) {
-      showToast("Manual mode requires at least one selected dimension.");
+      showToast("手动模式至少需要选择一个维度。");
       return;
     }
 
     if (mode === "ai" && !payload.text) {
-      showToast("AI mode requires non-empty text.");
+      showToast("AI 模式需要输入非空文本。");
       return;
     }
 
     if (mode === "hybrid" && !payload.ai_dimensions && !payload.text) {
-      showToast("Hybrid mode needs text or a reusable AI cache.");
+      showToast("混合模式需要输入文本或有可用的 AI 缓存。");
       return;
     }
 
-    showLoading("Building final evaluation...");
+    if (payload.save_to_lead && !payload.company) {
+      showToast("保存到线索管理表时需要填写A卡客户名称。");
+      return;
+    }
+
+    showLoading("正在计算评估结果...");
     try {
       const response = await CRMApp.apiRequest(API.evaluate, {
         method: "POST",
         body: payload
       });
       renderResult(cardKey, response);
-      showToast("Evaluation completed.");
+      if (payload.save_to_lead && response.lead_id) {
+        showToast(response.merged_existing_lead ? "已合并到已有线索" : "已新建线索并保存评估明细");
+      } else {
+        showToast("评估完成。");
+      }
     } catch (error) {
-      showToast(error.message || "Evaluation failed.");
+      showToast(error.message || "评估失败，请检查网络连接或联系管理员。");
     } finally {
       hideLoading();
     }
@@ -1444,6 +1467,7 @@ tbody tr:last-child td{
     if (config.industryId) document.getElementById(config.industryId).value = "";
     if (config.opportunityId) document.getElementById(config.opportunityId).value = "";
     if (config.amountId) document.getElementById(config.amountId).value = "";
+    if (cardKey === "a") document.getElementById("a-save-to-lead").checked = false;
     document.getElementById(config.textId).value = "";
 
     resetManualFields(cardKey);
@@ -1456,7 +1480,7 @@ tbody tr:last-child td{
     const formData = new FormData();
     formData.append("audio", audioBlob, `card-evaluation-${Date.now()}.webm`);
 
-    showLoading("Transcribing audio...");
+    showLoading("正在转写音频...");
     try {
       const result = await CRMApp.apiRequest(API.transcribe, {
         method: "POST",
@@ -1466,10 +1490,10 @@ tbody tr:last-child td{
       textarea.value = textarea.value.trim()
         ? `${textarea.value.trim()}\n${result.text}`
         : result.text;
-      clearAiCache(cardKey, "Text changed. Run AI extraction again.");
-      showToast("Audio transcription completed.");
+      clearAiCache(cardKey, "文本已变更，请重新运行 AI 识别。");
+      showToast("语音转写完成。");
     } catch (error) {
-      showToast(error.message || "Transcription failed.");
+      showToast(error.message || "转写失败。");
     } finally {
       hideLoading();
     }
@@ -1539,12 +1563,12 @@ tbody tr:last-child td{
 
       state.recorder = { cardKey, recorder, timer };
     } catch (error) {
-      showToast("Microphone access is unavailable.");
+      showToast("麦克风无法访问，请检查权限。");
     }
   }
 
   async function loadScoringFields() {
-    showLoading("Loading formal scoring fields...");
+    showLoading("正在加载评分字段...");
     try {
       /**
        * A卡：继续使用旧正式评分字段接口
@@ -1562,7 +1586,7 @@ tbody tr:last-child td{
 
       renderManualFields("a");
       renderManualFields("b");
-      showToast(error.message || "Failed to load scoring fields.");
+      showToast(error.message || "评分字段加载失败。");
     } finally {
       hideLoading();
     }

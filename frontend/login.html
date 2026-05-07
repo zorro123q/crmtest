@@ -225,10 +225,7 @@
     <div class="panel">
       <section class="hero">
         <h1>账号密码登录</h1>
-        <p>
-          暂时不开放自助注册。
-        </p>
-
+        <p>暂时不开放自助注册。</p>
       </section>
 
       <section class="form-wrap">
@@ -262,27 +259,10 @@
 <script src="crm-common.js"></script>
 <script>
   function getApiBaseUrl() {
-    var params = new URLSearchParams(window.location.search);
-    var queryValue = params.get('apiBase');
-    var savedValue = localStorage.getItem('crm_api_base');
-    var rawBase = queryValue || savedValue;
-
-    if (rawBase) {
-      return rawBase.replace(/\/$/, '');
+    if (window.CRMApp && typeof CRMApp.getApiBase === 'function') {
+      return CRMApp.getApiBase();
     }
-
-    var hostname = window.location.hostname;
-    var protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-
-    if (window.location.protocol === 'file:' || !hostname) {
-      return 'http://127.0.0.1:8000';
-    }
-
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://127.0.0.1:8000';
-    }
-
-    return protocol + '//' + hostname + ':8000';
+    return window.location.origin.replace(/\/$/, '');
   }
 
   function showError(message) {
@@ -343,8 +323,20 @@
     try {
       var apiBase = getApiBaseUrl();
       var payload = await login(username, password);
-      CRMApp.setAuthSession(payload.user, payload.access_token, apiBase);
-      CRMApp.redirectToDefault(payload.user);
+
+      if (window.CRMApp && typeof CRMApp.setAuthSession === 'function') {
+        CRMApp.setAuthSession(payload.user, payload.access_token, apiBase);
+      } else {
+        localStorage.setItem('crm_token', payload.access_token);
+        localStorage.setItem('crm_user', JSON.stringify(payload.user || {}));
+        localStorage.setItem('crm_api_base', apiBase);
+      }
+
+      if (window.CRMApp && typeof CRMApp.redirectToDefault === 'function') {
+        CRMApp.redirectToDefault(payload.user);
+      } else {
+        window.location.href = '/page-report.html';
+      }
     } catch (error) {
       showError(error.message || '登录失败，请稍后重试。');
     } finally {
@@ -354,8 +346,12 @@
   });
 
   document.addEventListener('DOMContentLoaded', function() {
-    if (CRMApp.isAuthenticated()) {
-      CRMApp.redirectToDefault();
+    if (window.CRMApp && typeof CRMApp.isAuthenticated === 'function' && CRMApp.isAuthenticated()) {
+      CRMApp.verifyAuthSession().then(function(user) {
+        if (user) {
+          CRMApp.redirectToDefault(user);
+        }
+      });
     }
   });
 </script>

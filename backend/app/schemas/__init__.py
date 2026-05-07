@@ -45,11 +45,13 @@ class TokenResponse(BaseModel):
 class UserCreateRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=100)
     password: str = Field(..., min_length=1, max_length=255)
+    is_admin: bool = False
 
 
 class UserUpdateRequest(BaseModel):
     username: str | None = Field(None, min_length=1, max_length=100)
     password: str | None = Field(None, min_length=1, max_length=255)
+    is_admin: bool | None = None
 
 
 class ChangePasswordRequest(BaseModel):
@@ -72,6 +74,24 @@ class ChangePasswordRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+
+ReviewStatus = Literal["pending", "approved", "rejected"]
+
+
+class BatchReviewRequest(BaseModel):
+    object_type: Literal["lead", "opportunity"]
+    ids: list[UUID] = Field(..., min_length=1)
+    action: Literal["approved", "rejected"]
+    remark: str | None = Field(None, max_length=2000)
+
+
+class BatchReviewResponse(BaseModel):
+    object_type: Literal["lead", "opportunity"]
+    action: Literal["approved", "rejected"]
+    reviewed_count: int
+    review_by: UUID
+    review_at: datetime
 
 
 class ScoringDimensionsInput(BaseModel):
@@ -259,6 +279,10 @@ class OpportunityOut(BaseModel):
     owner_username: str | None = None
     owner: UserOut | None = None
     is_active: bool = True
+    review_status: ReviewStatus = "pending"
+    review_by: UUID | None = None
+    review_at: datetime | None = None
+    review_remark: str | None = None
     created_at: datetime
     updated_at: datetime
 ########
@@ -337,6 +361,10 @@ class LeadOut(BaseModel):
     custom_fields: dict[str, Any] = Field(default_factory=dict)
     owner: UserOut | None = None
     is_active: bool = True
+    review_status: ReviewStatus = "pending"
+    review_by: UUID | None = None
+    review_at: datetime | None = None
+    review_remark: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -360,18 +388,20 @@ class OpportunityReportResponse(BaseModel):
 
 class AIParseRequest(BaseModel):
     text: str = Field(..., min_length=5, description="Original transcript or note")
+    save_to_lead: bool = Field(False, description="Create a lead after parsing")
     save_to_opportunity: bool = Field(False, description="Create an opportunity after parsing")
 
 
 class AIParseResponse(BaseModel):
-    customer_name: str
-    deal_value: float
-    stage: str
-    key_needs: list[str]
-    next_step: str
+    lead: dict[str, Any]
+    opportunity: dict[str, Any]
     confidence_score: float
-    usage: dict[str, Any] | None = None
+    missing_fields: list[str] = Field(default_factory=list)
+    suggestion: str = ""
+    lead_id: UUID | None = None
     opportunity_id: UUID | None = None
+    saved_to_lead: bool = False
+    saved_to_opportunity: bool = False
 
 
 class CardEvaluateRequest(BaseModel):
@@ -384,6 +414,7 @@ class CardEvaluateRequest(BaseModel):
     ai_dimensions: dict[str, str | None] | None = None
     manual_dimensions: dict[str, str | None] | None = None
     text: str = Field("", max_length=10000)
+    save_to_lead: bool = False
 
     @model_validator(mode="after")
     def validate_inputs(self):
@@ -431,6 +462,8 @@ class CardEvaluateResponse(BaseModel):
     manual_dimensions: dict[str, str | None] | None = None
     merged_dimensions: dict[str, str | None]
     dimensions: list[CardDimensionScore]
+    lead_id: UUID | None = None
+    merged_existing_lead: bool = False
 
 
 class CardTranscribeResponse(BaseModel):

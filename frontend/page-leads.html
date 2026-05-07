@@ -253,7 +253,6 @@ body{
   border:1px solid var(--border);
   border-radius:20px;
   box-shadow:var(--shadow);
-  overflow:hidden;
 }
 
 .panel-head{
@@ -263,6 +262,7 @@ body{
   justify-content:space-between;
   align-items:center;
   gap:16px;
+  border-radius:20px 20px 0 0;
 }
 
 .panel-head h2{
@@ -276,7 +276,29 @@ body{
 }
 
 .table-wrap{
-  overflow:auto;
+  overflow-x:auto;
+  /* 始终显示横向滚动条，不需要拉到底部 */
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+  border-radius:0 0 20px 20px;
+}
+
+.table-wrap::-webkit-scrollbar{
+  height:8px;
+}
+
+.table-wrap::-webkit-scrollbar-track{
+  background:var(--bg);
+  border-radius:0 0 20px 20px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb{
+  background:var(--border);
+  border-radius:999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover{
+  background:#94a3b8;
 }
 
 table{
@@ -382,6 +404,65 @@ tbody tr:hover{
 .action-delete{
   background:#fef2f2;
   color:#b91c1c;
+}
+
+.rating-btn{
+  border:none;
+  cursor:pointer;
+}
+
+.evaluation-section{
+  border:1px solid var(--border);
+  border-radius:12px;
+  margin-bottom:14px;
+  overflow:hidden;
+}
+
+.evaluation-section h4{
+  margin:0;
+  padding:12px 14px;
+  background:#f8fafc;
+  border-bottom:1px solid var(--border);
+  font-size:14px;
+}
+
+.evaluation-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  padding:14px;
+}
+
+.evaluation-item{
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px;
+}
+
+.evaluation-label{
+  color:var(--text2);
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:4px;
+}
+
+.evaluation-value{
+  font-size:13px;
+  line-height:1.6;
+  word-break:break-word;
+}
+
+.dimension-table{
+  width:100%;
+  min-width:640px;
+  border-collapse:collapse;
+}
+
+.dimension-table th,.dimension-table td{
+  padding:10px;
+  border:1px solid var(--border);
+  font-size:12px;
 }
 
 .action-group{
@@ -645,11 +726,13 @@ tbody tr:hover{
     <div class="topbar">
       <div>
         <h1>客户跟踪信息表</h1>
-        <p>按"客户基本信息收集 → 第一次初审 → 客户有效接触 → 第二次初审 → 获得认可 → 第三次初审"的流程记录客户推进情况。</p>
+        <p>记录客户推进信息，并通过统一的管理员审核状态控制数据生效。</p>
       </div>
       <div class="toolbar">
         <input class="search" id="search-input" type="text" placeholder="搜索商务负责人、单位名称、行业、需求、来源、关键人">
         <button class="btn btn-ghost" id="refresh-btn">刷新</button>
+        <button class="btn btn-ghost" id="bulk-approve-btn" style="display:none">批量审核通过</button>
+        <button class="btn btn-ghost" id="bulk-reject-btn" style="display:none">批量驳回</button>
         <button class="btn btn-ghost" id="download-template-btn">下载导入模板</button>
         <button class="btn btn-ghost" id="import-btn">导入数据</button>
         <input id="import-file-input" type="file" accept=".xlsx,.csv" style="display:none">
@@ -672,9 +755,9 @@ tbody tr:hover{
           <div class="stat-hint">按 owner_id 匹配</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">第一次初审通过</div>
+          <div class="stat-label">审核通过</div>
           <div class="stat-value" id="stat-first-pass">0</div>
-          <div class="stat-hint">基础信息已通过第一次初审</div>
+          <div class="stat-hint">管理员审核状态为 approved</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">A/B级商机数</div>
@@ -696,24 +779,24 @@ tbody tr:hover{
           <table>
             <thead>
               <tr>
+                <th class="admin-review-col"><input type="checkbox" id="select-all-leads"></th>
                 <th>客户信息</th>
                 <th>商务负责人</th>
                 <th>行业类别</th>
                 <th>新老客户</th>
                 <th>商机等级</th>
+                <th>评级</th>
                 <th>预算额度</th>
                 <th>线索来源</th>
                 <th>采购过相关产品</th>
-                <th>第一次初审</th>
+                <th>管理员审核状态</th>
                 <th>拜访关键人时间</th>
                 <th>关键决策链信息</th>
                 <th>需求及合作意向</th>
                 <th>下次拜访计划</th>
-                <th>第二次初审</th>
                 <th>合作方案交流情况</th>
                 <th>关键人是否认可</th>
                 <th>下步计划</th>
-                <th>第三次初审</th>
                 <th>更新时间</th>
                 <th>操作</th>
               </tr>
@@ -804,14 +887,20 @@ tbody tr:hover{
         </div>
 
         <div class="review-block">
-          <h4>第一次初审是否通过</h4>
+          <h4>管理员审核状态</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>审核状态</label>
+              <div id="lead-review-status">-</div>
+            </div>
+            <div class="form-group">
+              <label>审核信息</label>
+              <div id="lead-review-meta">-</div>
+            </div>
+          </div>
           <div class="form-group" style="margin-bottom:0;">
-            <label for="first-review-pass">第一次初审是否通过</label>
-            <select class="select" id="first-review-pass">
-              <option value="">请选择</option>
-              <option value="是">是</option>
-              <option value="否">否</option>
-            </select>
+            <label>审核备注</label>
+            <div id="lead-review-remark">-</div>
           </div>
         </div>
 
@@ -842,18 +931,6 @@ tbody tr:hover{
           </div>
         </div>
 
-        <div class="review-block">
-          <h4>第二次初审是否通过</h4>
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="second-review-pass">第二次初审是否通过</label>
-            <select class="select" id="second-review-pass">
-              <option value="">请选择</option>
-              <option value="是">是</option>
-              <option value="否">否</option>
-            </select>
-          </div>
-        </div>
-
         <div class="section-block">
           <h4>获得认可</h4>
           <p>记录合作方案交流情况、关键人是否认可、以及后续下步计划。</p>
@@ -880,22 +957,24 @@ tbody tr:hover{
           </div>
         </div>
 
-        <div class="review-block">
-          <h4>第三次初审是否通过</h4>
-          <div class="form-group" style="margin-bottom:0;">
-            <label for="third-review-pass">第三次初审是否通过</label>
-            <select class="select" id="third-review-pass">
-              <option value="">请选择</option>
-              <option value="是">是</option>
-              <option value="否">否</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       <div class="modal-foot">
         <button class="btn btn-ghost" id="cancel-btn">取消</button>
         <button class="btn btn-primary" id="save-btn">保存客户跟踪</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="evaluation-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="evaluation-modal-title">评级评估明细</h3>
+        <button class="modal-close" id="evaluation-modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="evaluation-modal-body"></div>
+      <div class="modal-foot">
+        <button class="btn btn-primary" id="evaluation-modal-ok-btn">关闭</button>
       </div>
     </div>
   </div>
@@ -907,6 +986,7 @@ var leads = [];
 var filteredLeads = [];
 var editingLeadId = null;
 var currentMode = 'create';
+var selectedLeadIds = new Set();
 
 function formatDate(value) {
   if (!value) return '-';
@@ -931,6 +1011,24 @@ function getYesNoClass(value) {
   return 'pill pill-gray';
 }
 
+function getReviewLabel(status) {
+  var normalized = String(status || 'pending').toLowerCase();
+  if (normalized === 'approved') return '已通过';
+  if (normalized === 'rejected') return '已驳回';
+  return '待审核';
+}
+
+function getReviewClass(status) {
+  var normalized = String(status || 'pending').toLowerCase();
+  if (normalized === 'approved') return 'pill pill-green';
+  if (normalized === 'rejected') return 'pill pill-red';
+  return 'pill pill-orange';
+}
+
+function isAdminUser() {
+  return CRMApp.isAdmin(currentUser);
+}
+
 function normalizeLead(item) {
   var custom = item.custom_fields || {};
 
@@ -950,21 +1048,22 @@ function normalizeLead(item) {
     leadSource: custom.lead_source || item.source || '',
     purchasedRelatedProducts: custom.purchased_related_products || '',
 
-    firstReviewPass: custom.first_review_pass || '',
-
     visitKeyTime: custom.visit_key_time || '',
     decisionChainInfo: custom.decision_chain_info || '',
     cooperationIntent: custom.cooperation_intent || '',
     nextVisitPlan: custom.next_visit_plan || '',
 
-    secondReviewPass: custom.second_review_pass || '',
-
     cooperationSchemeStatus: custom.cooperation_scheme_status || '',
     keyPersonApproved: custom.key_person_approved || '',
     nextStepPlan: custom.next_step_plan || '',
 
-    thirdReviewPass: custom.third_review_pass || '',
-
+    reviewStatus: item.review_status || 'pending',
+    reviewBy: item.review_by || '',
+    reviewAt: item.review_at || '',
+    reviewRemark: item.review_remark || '',
+    cardScore: item.card_score || item.score || 0,
+    cardLevel: item.card_level || 'E',
+    scoreDetail: item.score_detail_json || {},
     status: item.status || 'new',
     updatedAt: item.updated_at || '',
     createdAt: item.created_at || '',
@@ -972,8 +1071,8 @@ function normalizeLead(item) {
   };
 }
 
-function canEditLead() {
-  return !!currentUser;
+function canEditLead(item) {
+  return CRMApp.canEditOwner(currentUser, item && item.ownerId);
 }
 
 function canDeleteLead(item) {
@@ -1035,7 +1134,8 @@ function applyFilter() {
       item.cooperationSchemeStatus,
       item.keyPersonApproved,
       item.nextStepPlan,
-      item.ownerName
+      item.ownerName,
+      getReviewLabel(item.reviewStatus)
     ].join(' ').toLowerCase().indexOf(keyword) >= 0;
   });
 
@@ -1049,8 +1149,8 @@ function renderStats() {
     return String(item.ownerId) === String(currentUser.id);
   }).length;
 
-  var firstPassed = filteredLeads.filter(function(item) {
-    return item.firstReviewPass === '是';
+  var approvedCount = filteredLeads.filter(function(item) {
+    return item.reviewStatus === 'approved';
   }).length;
 
   var highCount = filteredLeads.filter(function(item) {
@@ -1059,7 +1159,7 @@ function renderStats() {
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-mine').textContent = mine;
-  document.getElementById('stat-first-pass').textContent = firstPassed;
+  document.getElementById('stat-first-pass').textContent = approvedCount;
   document.getElementById('stat-high').textContent = highCount;
   document.getElementById('result-count').textContent = total + ' 条记录';
 }
@@ -1071,16 +1171,23 @@ function renderTable() {
   if (!filteredLeads.length) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
+    updateLeadSelectionUI();
     return;
   }
 
   empty.style.display = 'none';
 
+  var admin = isAdminUser();
   tbody.innerHTML = filteredLeads.map(function(item) {
     var editable = canEditLead(item);
     var deletable = canDeleteLead(item);
+    var selected = selectedLeadIds.has(item.id) ? ' checked' : '';
+    var selectCell = admin
+      ? '<td class="admin-review-col"><input type="checkbox" class="lead-row-select" data-id="' + item.id + '"' + selected + '></td>'
+      : '';
 
     return '<tr>' +
+      selectCell +
       '<td class="primary-cell">' +
         '<div class="primary-title">' + CRMApp.escapeHtml(item.unitName || '-') + '</div>' +
         '<div class="primary-desc">' + CRMApp.escapeHtml(item.requirementDesc || '暂无需求描述') + '</div>' +
@@ -1089,19 +1196,18 @@ function renderTable() {
       '<td>' + CRMApp.escapeHtml(item.industryCategory || '-') + '</td>' +
       '<td>' + CRMApp.escapeHtml(item.customerType || '-') + '</td>' +
       '<td><span class="' + getLevelClass(item.opportunityLevel) + '">' + CRMApp.escapeHtml(item.opportunityLevel || '-') + '</span></td>' +
+      '<td><button class="pill rating-btn ' + getLevelClass(item.cardLevel) + '" onclick="openEvaluationModal(\'' + item.id + '\')">' + CRMApp.escapeHtml(item.cardLevel || '-') + '</button></td>' +
       '<td>' + CRMApp.escapeHtml(item.budgetAmount || '-') + '</td>' +
       '<td>' + CRMApp.escapeHtml(item.leadSource || '-') + '</td>' +
       '<td><span class="' + getYesNoClass(item.purchasedRelatedProducts) + '">' + CRMApp.escapeHtml(item.purchasedRelatedProducts || '-') + '</span></td>' +
-      '<td><span class="' + getYesNoClass(item.firstReviewPass) + '">' + CRMApp.escapeHtml(item.firstReviewPass || '-') + '</span></td>' +
+      '<td><span class="' + getReviewClass(item.reviewStatus) + '">' + CRMApp.escapeHtml(getReviewLabel(item.reviewStatus)) + '</span></td>' +
       '<td>' + CRMApp.escapeHtml(item.visitKeyTime || '-') + '</td>' +
       '<td>' + CRMApp.escapeHtml(item.decisionChainInfo || '-') + '</td>' +
       '<td>' + CRMApp.escapeHtml(item.cooperationIntent || '-') + '</td>' +
       '<td>' + CRMApp.escapeHtml(item.nextVisitPlan || '-') + '</td>' +
-      '<td><span class="' + getYesNoClass(item.secondReviewPass) + '">' + CRMApp.escapeHtml(item.secondReviewPass || '-') + '</span></td>' +
       '<td>' + CRMApp.escapeHtml(item.cooperationSchemeStatus || '-') + '</td>' +
       '<td><span class="' + getYesNoClass(item.keyPersonApproved) + '">' + CRMApp.escapeHtml(item.keyPersonApproved || '-') + '</span></td>' +
       '<td>' + CRMApp.escapeHtml(item.nextStepPlan || '-') + '</td>' +
-      '<td><span class="' + getYesNoClass(item.thirdReviewPass) + '">' + CRMApp.escapeHtml(item.thirdReviewPass || '-') + '</span></td>' +
       '<td>' + CRMApp.escapeHtml(formatDate(item.updatedAt)) + '</td>' +
       '<td><div class="action-group">' +
         '<button class="action-btn ' + (editable ? 'action-edit' : 'action-view') + '" onclick="openDetailModal(\'' + item.id + '\')">' + (editable ? '编辑' : '查看') + '</button>' +
@@ -1109,6 +1215,189 @@ function renderTable() {
       '</div></td>' +
     '</tr>';
   }).join('');
+
+  bindLeadSelectionEvents();
+  updateLeadSelectionUI();
+}
+
+function bindLeadSelectionEvents() {
+  if (!isAdminUser()) return;
+  document.querySelectorAll('.lead-row-select').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+      if (checkbox.checked) {
+        selectedLeadIds.add(checkbox.dataset.id);
+      } else {
+        selectedLeadIds.delete(checkbox.dataset.id);
+      }
+      updateLeadSelectionUI();
+    });
+  });
+}
+
+function updateLeadSelectionUI() {
+  var selectAll = document.getElementById('select-all-leads');
+  if (!selectAll) return;
+
+  if (!isAdminUser()) {
+    selectAll.style.display = 'none';
+    return;
+  }
+
+  var visibleIds = filteredLeads.map(function(item) { return item.id; });
+  var selectedVisibleCount = visibleIds.filter(function(id) {
+    return selectedLeadIds.has(id);
+  }).length;
+
+  selectAll.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+  document.getElementById('bulk-approve-btn').disabled = selectedLeadIds.size === 0;
+  document.getElementById('bulk-reject-btn').disabled = selectedLeadIds.size === 0;
+}
+
+function initReviewControls() {
+  var show = isAdminUser();
+  document.getElementById('bulk-approve-btn').style.display = show ? '' : 'none';
+  document.getElementById('bulk-reject-btn').style.display = show ? '' : 'none';
+  document.querySelectorAll('.admin-review-col').forEach(function(element) {
+    element.style.display = show ? '' : 'none';
+  });
+}
+
+async function batchReviewLeads(action) {
+  if (!isAdminUser() || selectedLeadIds.size === 0) return;
+
+  var remark = window.prompt(action === 'approved' ? '请输入审核通过备注（可留空）' : '请输入驳回原因（可留空）', '');
+  if (remark === null) return;
+
+  try {
+    await CRMApp.apiRequest('/api/admin/reviews/batch', {
+      method: 'POST',
+      body: {
+        object_type: 'lead',
+        ids: Array.from(selectedLeadIds),
+        action: action,
+        remark: remark || null
+      }
+    });
+    selectedLeadIds.clear();
+    await loadLeads();
+  } catch (error) {
+    alert(error.message || '批量审核失败。');
+  }
+}
+
+function formatEvaluationMode(value) {
+  var mode = String(value || '').toLowerCase();
+  if (mode === 'ai') return '仅AI分析';
+  if (mode === 'manual') return '仅手动录入';
+  if (mode === 'hybrid') return 'AI + 手动合并分析';
+  return value || '-';
+}
+
+function formatEvaluationObject(value) {
+  if (!value || typeof value !== 'object') return '-';
+  return Object.keys(value).map(function(key) {
+    var item = value[key];
+    return key + ': ' + (item == null || item === '' ? '-' : item);
+  }).join('\n') || '-';
+}
+
+function getEvaluationDimensions(detail) {
+  if (!detail || typeof detail !== 'object') return [];
+  if (Array.isArray(detail.dimensions)) {
+    return detail.dimensions.map(function(item) {
+      return {
+        name: item.name || item.key || '-',
+        selected: item.selected_label || item.selected_value || '-',
+        score: item.score,
+        maxScore: item.max_score,
+        source: item.source || '-'
+      };
+    });
+  }
+
+  return Object.keys(detail).filter(function(key) {
+    return detail[key] && typeof detail[key] === 'object' && 'score' in detail[key];
+  }).map(function(key) {
+    var item = detail[key] || {};
+    return {
+      name: item.label || key,
+      selected: item.value_label || item.value || '-',
+      score: item.score,
+      maxScore: '',
+      source: '-'
+    };
+  });
+}
+
+function renderDimensionTable(detail) {
+  var rows = getEvaluationDimensions(detail);
+  if (!rows.length) {
+    return '<div class="empty">暂无维度得分明细</div>';
+  }
+
+  return '<div class="table-wrap"><table class="dimension-table">' +
+    '<thead><tr><th>维度</th><th>选中值</th><th>得分</th><th>来源</th></tr></thead>' +
+    '<tbody>' + rows.map(function(row) {
+      var scoreText = row.maxScore || row.maxScore === 0
+        ? String(row.score || 0) + ' / ' + String(row.maxScore)
+        : String(row.score || 0);
+      return '<tr>' +
+        '<td>' + CRMApp.escapeHtml(row.name) + '</td>' +
+        '<td>' + CRMApp.escapeHtml(row.selected) + '</td>' +
+        '<td>' + CRMApp.escapeHtml(scoreText) + '</td>' +
+        '<td>' + CRMApp.escapeHtml(row.source) + '</td>' +
+      '</tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderEvaluationSection(title, detail, fallbackItem) {
+  detail = detail || {};
+  var totalScore = detail.total_score;
+  if (totalScore === undefined || totalScore === null) totalScore = detail.normalized_score;
+  if (totalScore === undefined || totalScore === null) totalScore = fallbackItem.cardScore || 0;
+  var grade = detail.grade || fallbackItem.cardLevel || '-';
+  var evaluatedAt = detail.evaluated_at || detail.created_at || '';
+
+  return '<div class="evaluation-section">' +
+    '<h4>' + CRMApp.escapeHtml(title) + '</h4>' +
+    '<div class="evaluation-grid">' +
+      '<div class="evaluation-item"><div class="evaluation-label">总分</div><div class="evaluation-value">' + CRMApp.escapeHtml(totalScore) + '</div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">评级</div><div class="evaluation-value">' + CRMApp.escapeHtml(grade) + '</div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">评级说明</div><div class="evaluation-value">' + CRMApp.escapeHtml(detail.rating_desc || detail.grade_label || '-') + '</div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">跟进建议</div><div class="evaluation-value">' + CRMApp.escapeHtml(detail.suggestion || '-') + '</div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">评估模式</div><div class="evaluation-value">' + CRMApp.escapeHtml(formatEvaluationMode(detail.analysis_mode)) + '</div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">评估时间</div><div class="evaluation-value">' + CRMApp.escapeHtml(evaluatedAt ? formatDate(evaluatedAt) : '-') + '</div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">AI维度</div><div class="evaluation-value"><pre>' + CRMApp.escapeHtml(formatEvaluationObject(detail.ai_dimensions)) + '</pre></div></div>' +
+      '<div class="evaluation-item"><div class="evaluation-label">手动维度</div><div class="evaluation-value"><pre>' + CRMApp.escapeHtml(formatEvaluationObject(detail.manual_dimensions)) + '</pre></div></div>' +
+      '<div class="evaluation-item" style="grid-column:1/-1"><div class="evaluation-label">合并维度</div><div class="evaluation-value"><pre>' + CRMApp.escapeHtml(formatEvaluationObject(detail.merged_dimensions)) + '</pre></div></div>' +
+    '</div>' +
+    renderDimensionTable(detail) +
+  '</div>';
+}
+
+function openEvaluationModal(id) {
+  var item = leads.find(function(entry) { return entry.id === id; });
+  if (!item) return;
+
+  var history = (item.raw.custom_fields && item.raw.custom_fields.value_evaluation_history) || [];
+  if (!Array.isArray(history)) history = [];
+
+  var bodyHtml = '';
+  bodyHtml += renderEvaluationSection('当前评估明细', item.scoreDetail || {}, item);
+  if (history.length) {
+    bodyHtml += history.slice().reverse().map(function(detail, index) {
+      return renderEvaluationSection('历史评估记录 #' + (history.length - index), detail || {}, item);
+    }).join('');
+  }
+
+  document.getElementById('evaluation-modal-title').textContent = (item.unitName || '线索') + ' · 评级评估明细';
+  document.getElementById('evaluation-modal-body').innerHTML = bodyHtml || '<div class="empty">暂无评估明细</div>';
+  document.getElementById('evaluation-modal').classList.add('active');
+}
+
+function closeEvaluationModal() {
+  document.getElementById('evaluation-modal').classList.remove('active');
 }
 
 function updateDuplicateWarning() {
@@ -1149,16 +1438,13 @@ function setFormReadOnly(readOnly) {
     'budget-amount',
     'lead-source',
     'purchased-related-products',
-    'first-review-pass',
     'visit-key-time',
     'decision-chain-info',
     'cooperation-intent',
     'next-visit-plan',
-    'second-review-pass',
     'cooperation-scheme-status',
     'key-person-approved',
-    'next-step-plan',
-    'third-review-pass'
+    'next-step-plan'
   ].forEach(function(id) {
     var element = document.getElementById(id);
     if (!element) return;
@@ -1178,16 +1464,17 @@ function fillForm(item, readOnly) {
     budgetAmount: '',
     leadSource: '',
     purchasedRelatedProducts: '',
-    firstReviewPass: '',
     visitKeyTime: '',
     decisionChainInfo: '',
     cooperationIntent: '',
     nextVisitPlan: '',
-    secondReviewPass: '',
     cooperationSchemeStatus: '',
     keyPersonApproved: '',
     nextStepPlan: '',
-    thirdReviewPass: ''
+    reviewStatus: 'pending',
+    reviewBy: '',
+    reviewAt: '',
+    reviewRemark: ''
   };
 
   document.getElementById('business-owner').value = values.businessOwner || '';
@@ -1200,20 +1487,20 @@ function fillForm(item, readOnly) {
   document.getElementById('lead-source').value = values.leadSource || '';
   document.getElementById('purchased-related-products').value = values.purchasedRelatedProducts || '';
 
-  document.getElementById('first-review-pass').value = values.firstReviewPass || '';
+  document.getElementById('lead-review-status').innerHTML =
+    '<span class="' + getReviewClass(values.reviewStatus) + '">' + CRMApp.escapeHtml(getReviewLabel(values.reviewStatus)) + '</span>';
+  document.getElementById('lead-review-meta').textContent =
+    values.reviewAt ? formatDate(values.reviewAt) : '-';
+  document.getElementById('lead-review-remark').textContent = values.reviewRemark || '-';
 
   document.getElementById('visit-key-time').value = values.visitKeyTime || '';
   document.getElementById('decision-chain-info').value = values.decisionChainInfo || '';
   document.getElementById('cooperation-intent').value = values.cooperationIntent || '';
   document.getElementById('next-visit-plan').value = values.nextVisitPlan || '';
 
-  document.getElementById('second-review-pass').value = values.secondReviewPass || '';
-
   document.getElementById('cooperation-scheme-status').value = values.cooperationSchemeStatus || '';
   document.getElementById('key-person-approved').value = values.keyPersonApproved || '';
   document.getElementById('next-step-plan').value = values.nextStepPlan || '';
-
-  document.getElementById('third-review-pass').value = values.thirdReviewPass || '';
 
   updateDuplicateWarning();
   setFormReadOnly(readOnly);
@@ -1248,24 +1535,6 @@ function closeModal() {
   document.getElementById('lead-modal').classList.remove('active');
 }
 
-function deriveStatus(payload) {
-  var custom = payload.custom_fields || {};
-
-  if (custom.third_review_pass === '是') {
-    return 'converted';
-  }
-
-  if (custom.second_review_pass === '是') {
-    return 'follow_up';
-  }
-
-  if (custom.first_review_pass === '否') {
-    return 'invalid';
-  }
-
-  return 'new';
-}
-
 function collectPayload() {
   var unitName = document.getElementById('unit-name').value.trim();
   if (!unitName) {
@@ -1287,24 +1556,17 @@ function collectPayload() {
       lead_source: document.getElementById('lead-source').value.trim(),
       purchased_related_products: document.getElementById('purchased-related-products').value || '',
 
-      first_review_pass: document.getElementById('first-review-pass').value || '',
-
       visit_key_time: document.getElementById('visit-key-time').value.trim(),
       decision_chain_info: document.getElementById('decision-chain-info').value.trim(),
       cooperation_intent: document.getElementById('cooperation-intent').value.trim(),
       next_visit_plan: document.getElementById('next-visit-plan').value.trim(),
 
-      second_review_pass: document.getElementById('second-review-pass').value || '',
-
       cooperation_scheme_status: document.getElementById('cooperation-scheme-status').value.trim(),
       key_person_approved: document.getElementById('key-person-approved').value || '',
-      next_step_plan: document.getElementById('next-step-plan').value.trim(),
-
-      third_review_pass: document.getElementById('third-review-pass').value || ''
+      next_step_plan: document.getElementById('next-step-plan').value.trim()
     }
   };
 
-  payload.status = deriveStatus(payload);
   return payload;
 }
 
@@ -1419,11 +1681,26 @@ async function importLeadFile(file) {
 async function initPage() {
   if (!currentUser) return;
   setUserUI();
+  initReviewControls();
   await loadLeads();
 }
 
 document.getElementById('search-input').addEventListener('input', applyFilter);
 document.getElementById('refresh-btn').addEventListener('click', loadLeads);
+document.getElementById('bulk-approve-btn').addEventListener('click', function() {
+  batchReviewLeads('approved');
+});
+document.getElementById('bulk-reject-btn').addEventListener('click', function() {
+  batchReviewLeads('rejected');
+});
+document.getElementById('select-all-leads').addEventListener('change', function(event) {
+  if (event.target.checked) {
+    filteredLeads.forEach(function(item) { selectedLeadIds.add(item.id); });
+  } else {
+    filteredLeads.forEach(function(item) { selectedLeadIds.delete(item.id); });
+  }
+  renderTable();
+});
 document.getElementById('download-template-btn').addEventListener('click', downloadImportTemplate);
 document.getElementById('import-btn').addEventListener('click', function() {
   document.getElementById('import-file-input').click();
@@ -1439,11 +1716,16 @@ document.getElementById('create-btn').addEventListener('click', openCreateModal)
 document.getElementById('modal-close-btn').addEventListener('click', closeModal);
 document.getElementById('cancel-btn').addEventListener('click', closeModal);
 document.getElementById('save-btn').addEventListener('click', saveLead);
+document.getElementById('evaluation-modal-close-btn').addEventListener('click', closeEvaluationModal);
+document.getElementById('evaluation-modal-ok-btn').addEventListener('click', closeEvaluationModal);
 
 document.getElementById('unit-name').addEventListener('input', updateDuplicateWarning);
 
 document.getElementById('lead-modal').addEventListener('click', function(event) {
   if (event.target === this) closeModal();
+});
+document.getElementById('evaluation-modal').addEventListener('click', function(event) {
+  if (event.target === this) closeEvaluationModal();
 });
 
 initPage();

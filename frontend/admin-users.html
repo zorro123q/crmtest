@@ -281,6 +281,44 @@ tr:hover td{background:#fbfdff}
   line-height:1.6;
 }
 
+.checkbox-field{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#f8fafc;
+  cursor:pointer;
+}
+
+.checkbox-field input{
+  width:auto;
+  padding:0;
+  border:none;
+  margin-top:3px;
+  box-shadow:none;
+}
+
+.checkbox-field input:focus{
+  box-shadow:none;
+}
+
+.checkbox-field span{
+  color:var(--text);
+  font-size:14px;
+  font-weight:700;
+}
+
+.checkbox-field small{
+  display:block;
+  margin-top:4px;
+  color:var(--text2);
+  font-size:12px;
+  font-weight:400;
+  line-height:1.5;
+}
+
 .modal-foot{
   padding:16px 22px 22px;
   display:flex;
@@ -383,6 +421,15 @@ tr:hover td{background:#fbfdff}
         <input id="modal-password" type="text" placeholder="请输入密码">
         <div class="form-hint" id="password-hint">新增用户时密码必填。编辑用户时留空表示不修改密码。</div>
       </div>
+      <div class="form-group">
+        <label class="checkbox-field" for="modal-is-admin">
+          <input id="modal-is-admin" type="checkbox">
+          <span>
+            管理员账号
+            <small>允许访问用户管理和所有管理员功能。</small>
+          </span>
+        </label>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('user-modal')">取消</button>
@@ -462,6 +509,8 @@ function openCreateModal() {
   document.getElementById('edit-user-id').value = '';
   document.getElementById('modal-username').value = '';
   document.getElementById('modal-password').value = '';
+  document.getElementById('modal-is-admin').checked = false;
+  document.getElementById('modal-is-admin').disabled = false;
   document.getElementById('password-hint').textContent = '新增用户时密码必填。';
   document.getElementById('save-btn').textContent = '创建';
   openModal('user-modal');
@@ -476,8 +525,10 @@ function openEditModal(userId) {
   document.getElementById('edit-user-id').value = user.id;
   document.getElementById('modal-username').value = user.username;
   document.getElementById('modal-password').value = '';
+  document.getElementById('modal-is-admin').checked = user.is_admin === true;
+  document.getElementById('modal-is-admin').disabled = user.username === 'admin';
   document.getElementById('password-hint').textContent = user.is_admin
-    ? 'admin 账号名称不可改成其它值，密码留空则保持不变。'
+    ? '管理员账号密码留空则保持不变。默认 admin 账号不能取消管理员权限。'
     : '留空表示不修改密码。';
   document.getElementById('save-btn').textContent = '保存';
   openModal('user-modal');
@@ -517,7 +568,7 @@ function renderUsers() {
       '<td>' + escHtml(formatDate(user.created_at)) + '</td>' +
       '<td><div class="actions">' +
         '<button class="action-btn action-edit" onclick="openEditModal(\'' + user.id + '\')">编辑</button>' +
-        (isAdmin
+        (isCurrent
           ? ''
           : '<button class="action-btn action-delete" onclick="deleteUser(\'' + user.id + '\')">删除</button>') +
       '</div></td>' +
@@ -546,6 +597,7 @@ async function saveUser() {
   var userId = document.getElementById('edit-user-id').value;
   var username = document.getElementById('modal-username').value.trim();
   var password = document.getElementById('modal-password').value;
+  var isAdmin = document.getElementById('modal-is-admin').checked;
 
   if (!username) {
     showToast('请输入用户名', 'error');
@@ -557,7 +609,7 @@ async function saveUser() {
     return;
   }
 
-  var payload = { username: username };
+  var payload = { username: username, is_admin: isAdmin };
   if (password) {
     payload.password = password;
   }
@@ -615,7 +667,21 @@ document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
   });
 });
 
-loadUsers();
+async function initPage() {
+  if (!currentUser) {
+    return;
+  }
+
+  var verifiedUser = await CRMApp.verifyAuthSession('user_management');
+  if (!verifiedUser) {
+    return;
+  }
+
+  currentUser = verifiedUser;
+  loadUsers();
+}
+
+initPage();
 </script>
 </body>
 </html>

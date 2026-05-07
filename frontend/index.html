@@ -7,7 +7,11 @@
 <script src="crm-common.js"></script>
 <script>
 if (CRMApp.isAuthenticated()) {
-  CRMApp.redirectToDefault();
+  CRMApp.verifyAuthSession().then(function(user) {
+    if (user) {
+      CRMApp.redirectToDefault(user);
+    }
+  });
 } else {
   CRMApp.redirectToLogin();
 }

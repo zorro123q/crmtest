@@ -197,7 +197,6 @@ body{
   border:1px solid var(--border);
   border-radius:20px;
   box-shadow:var(--shadow);
-  overflow:hidden;
 }
 .panel-head{
   padding:18px 20px;
@@ -206,6 +205,7 @@ body{
   justify-content:space-between;
   align-items:center;
   gap:16px;
+  border-radius:20px 20px 0 0;
 }
 .panel-head h2{
   font-size:18px;
@@ -216,7 +216,24 @@ body{
   color:var(--text2);
 }
 .table-wrap{
-  overflow:auto;
+  overflow-x:auto;
+  scrollbar-width:thin;
+  scrollbar-color:var(--border) transparent;
+  border-radius:0 0 20px 20px;
+}
+.table-wrap::-webkit-scrollbar{
+  height:8px;
+}
+.table-wrap::-webkit-scrollbar-track{
+  background:var(--bg);
+  border-radius:0 0 20px 20px;
+}
+.table-wrap::-webkit-scrollbar-thumb{
+  background:var(--border);
+  border-radius:999px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover{
+  background:#94a3b8;
 }
 table{
   width:100%;
@@ -472,6 +489,8 @@ tbody tr:hover{
       <div class="toolbar">
         <input class="search" id="search-input" type="text" placeholder="搜索负责人、客户、产品、需求、项目类型">
         <button class="btn btn-ghost" id="refresh-btn">刷新</button>
+        <button class="btn btn-ghost" id="bulk-approve-btn" style="display:none">批量审核通过</button>
+        <button class="btn btn-ghost" id="bulk-reject-btn" style="display:none">批量驳回</button>
         <button class="btn btn-ghost" id="download-template-btn">下载导入模板</button>
         <button class="btn btn-ghost" id="import-btn">导入数据</button>
         <input id="import-file-input" type="file" accept=".xlsx,.csv" style="display:none">
@@ -521,8 +540,10 @@ tbody tr:hover{
           <table>
             <thead>
               <tr>
+                <th class="admin-review-col"><input type="checkbox" id="select-all-opportunities"></th>
                 <th>商机负责人</th>
                 <th>客户名称</th>
+                <th>管理员审核</th>
                 <th>新老客户</th>
                 <th>涉及产品</th>
                 <th>预算情况</th>
@@ -576,6 +597,10 @@ tbody tr:hover{
           <div class="summary-item">
             <span>合同状态</span>
             <strong id="summary-contract">-</strong>
+          </div>
+          <div class="summary-item">
+            <span>管理员审核</span>
+            <strong id="summary-review">-</strong>
           </div>
         </div>
 
@@ -775,6 +800,7 @@ var opportunities = [];
 var filteredOpportunities = [];
 var editingOppId = null;
 var currentMode = 'create';
+var selectedOpportunityIds = new Set();
 
 function formatDate(value) {
   if (!value) return '-';
@@ -817,6 +843,24 @@ function getLevelClass(level) {
   return 'pill pill-gray';
 }
 
+function getReviewLabel(status) {
+  var normalized = String(status || 'pending').toLowerCase();
+  if (normalized === 'approved') return '已通过';
+  if (normalized === 'rejected') return '已驳回';
+  return '待审核';
+}
+
+function getReviewClass(status) {
+  var normalized = String(status || 'pending').toLowerCase();
+  if (normalized === 'approved') return 'pill pill-green';
+  if (normalized === 'rejected') return 'pill pill-red';
+  return 'pill pill-orange';
+}
+
+function isAdminUser() {
+  return CRMApp.isAdmin(currentUser);
+}
+
 function deriveStageFromForm(data) {
   if (data.contractSigned === '是') return '赢单';
   if (data.contractNegotiation) return '合同谈判';
@@ -855,6 +899,10 @@ function normalizeOpportunity(item) {
     contractSigned: item.contract_signed || custom.contract_signed || custom.signed || '',
     handoffCompleted: item.handoff_completed || custom.handoff_completed || '',
 
+    reviewStatus: item.review_status || 'pending',
+    reviewBy: item.review_by || '',
+    reviewAt: item.review_at || '',
+    reviewRemark: item.review_remark || '',
     stage: item.stage || '初步接触',
     status: item.status || 'new',
     updatedAt: item.updated_at || '',
@@ -862,8 +910,8 @@ function normalizeOpportunity(item) {
   };
 }
 
-function canEditOpportunity() {
-  return !!currentUser;
+function canEditOpportunity(item) {
+  return CRMApp.canEditOwner(currentUser, item && item.ownerId);
 }
 
 function canDeleteOpportunity(item) {
@@ -890,7 +938,8 @@ function getSearchText(item) {
     item.contractSigned,
     item.handoffCompleted,
     item.stage,
-    item.status
+    item.status,
+    getReviewLabel(item.reviewStatus)
   ].join(' ').toLowerCase();
 }
 
@@ -963,19 +1012,27 @@ function renderTable() {
   if (!filteredOpportunities.length) {
     tbody.innerHTML = '';
     empty.style.display = 'block';
+    updateOpportunitySelectionUI();
     return;
   }
 
   empty.style.display = 'none';
 
+  var admin = isAdminUser();
   tbody.innerHTML = filteredOpportunities.map(function(item) {
     var editable = canEditOpportunity(item);
     var deletable = canDeleteOpportunity(item);
+    var selected = selectedOpportunityIds.has(item.id) ? ' checked' : '';
+    var selectCell = admin
+      ? '<td class="admin-review-col"><input type="checkbox" class="opportunity-row-select" data-id="' + item.id + '"' + selected + '></td>'
+      : '';
 
     return ''
       + '<tr>'
+      +   selectCell
       +   '<td>' + CRMApp.escapeHtml(item.ownerName || '-') + '</td>'
       +   '<td><strong>' + CRMApp.escapeHtml(item.customerName || '-') + '</strong></td>'
+      +   '<td><span class="' + getReviewClass(item.reviewStatus) + '">' + CRMApp.escapeHtml(getReviewLabel(item.reviewStatus)) + '</span></td>'
       +   '<td><span class="' + getCustomerTypeClass(item.customerType) + '">' + CRMApp.escapeHtml(item.customerType || '-') + '</span></td>'
       +   '<td>' + CRMApp.escapeHtml(item.productName || '-') + '</td>'
       +   '<td>' + CRMApp.escapeHtml(formatAmount(item.budget)) + '</td>'
@@ -1000,6 +1057,75 @@ function renderTable() {
       +   '</td>'
       + '</tr>';
   }).join('');
+
+  bindOpportunitySelectionEvents();
+  updateOpportunitySelectionUI();
+}
+
+function bindOpportunitySelectionEvents() {
+  if (!isAdminUser()) return;
+  document.querySelectorAll('.opportunity-row-select').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+      if (checkbox.checked) {
+        selectedOpportunityIds.add(checkbox.dataset.id);
+      } else {
+        selectedOpportunityIds.delete(checkbox.dataset.id);
+      }
+      updateOpportunitySelectionUI();
+    });
+  });
+}
+
+function updateOpportunitySelectionUI() {
+  var selectAll = document.getElementById('select-all-opportunities');
+  if (!selectAll) return;
+
+  if (!isAdminUser()) {
+    selectAll.style.display = 'none';
+    return;
+  }
+
+  var visibleIds = filteredOpportunities.map(function(item) { return item.id; });
+  var selectedVisibleCount = visibleIds.filter(function(id) {
+    return selectedOpportunityIds.has(id);
+  }).length;
+
+  selectAll.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+  document.getElementById('bulk-approve-btn').disabled = selectedOpportunityIds.size === 0;
+  document.getElementById('bulk-reject-btn').disabled = selectedOpportunityIds.size === 0;
+}
+
+function initReviewControls() {
+  var show = isAdminUser();
+  document.getElementById('bulk-approve-btn').style.display = show ? '' : 'none';
+  document.getElementById('bulk-reject-btn').style.display = show ? '' : 'none';
+  document.querySelectorAll('.admin-review-col').forEach(function(element) {
+    element.style.display = show ? '' : 'none';
+  });
+}
+
+async function batchReviewOpportunities(action) {
+  if (!isAdminUser() || selectedOpportunityIds.size === 0) return;
+
+  var remark = window.prompt(action === 'approved' ? '请输入审核通过备注（可留空）' : '请输入驳回原因（可留空）', '');
+  if (remark === null) return;
+
+  try {
+    await CRMApp.apiRequest('/api/admin/reviews/batch', {
+      method: 'POST',
+      body: {
+        object_type: 'opportunity',
+        ids: Array.from(selectedOpportunityIds),
+        action: action,
+        remark: remark || null
+      }
+    });
+    selectedOpportunityIds.clear();
+    await loadOpportunities();
+  } catch (error) {
+    alert(error.message || '批量审核失败。');
+  }
 }
 
 function fillSummary() {
@@ -1007,11 +1133,17 @@ function fillSummary() {
   var customer = document.getElementById('opp-customer-name').value.trim();
   var level = document.getElementById('opp-opportunity-level').value;
   var contract = document.getElementById('opp-contract-signed').value;
+  var reviewStatus = 'pending';
+  if (editingOppId) {
+    var existing = opportunities.find(function(item) { return item.id === editingOppId; });
+    reviewStatus = existing ? existing.reviewStatus : reviewStatus;
+  }
 
   document.getElementById('summary-owner').textContent = owner || '-';
   document.getElementById('summary-customer').textContent = customer || '-';
   document.getElementById('summary-level').textContent = level || '-';
   document.getElementById('summary-contract').textContent = contract || '-';
+  document.getElementById('summary-review').textContent = getReviewLabel(reviewStatus);
 }
 
 function updateDuplicateWarning() {
@@ -1384,11 +1516,26 @@ async function importOpportunityFile(file) {
 async function initPage() {
   if (!currentUser) return;
   setUserUI();
+  initReviewControls();
   await loadOpportunities();
 }
 
 document.getElementById('search-input').addEventListener('input', applyFilter);
 document.getElementById('refresh-btn').addEventListener('click', loadOpportunities);
+document.getElementById('bulk-approve-btn').addEventListener('click', function() {
+  batchReviewOpportunities('approved');
+});
+document.getElementById('bulk-reject-btn').addEventListener('click', function() {
+  batchReviewOpportunities('rejected');
+});
+document.getElementById('select-all-opportunities').addEventListener('change', function(event) {
+  if (event.target.checked) {
+    filteredOpportunities.forEach(function(item) { selectedOpportunityIds.add(item.id); });
+  } else {
+    filteredOpportunities.forEach(function(item) { selectedOpportunityIds.delete(item.id); });
+  }
+  renderTable();
+});
 document.getElementById('download-template-btn').addEventListener('click', downloadImportTemplate);
 document.getElementById('import-btn').addEventListener('click', function() {
   document.getElementById('import-file-input').click();

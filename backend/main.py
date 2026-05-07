@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
-from app.api.routes import admin, ai, auth, card_evaluations, leads, opportunities, opportunity_report, scoring
+from app.api.routes import admin, ai, auth, card_evaluations, leads, opportunities, opportunity_report, reviews, scoring
 from app.api.routes.analytics import router as analytics_router
 from app.core.config import settings
 from app.core.security import hash_password
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
             if existing_admin_id is None:
                 # 默认密码从环境变量 ADMIN_DEFAULT_PASSWORD 读取，避免硬编码弱密码
                 default_pwd = settings.ADMIN_DEFAULT_PASSWORD
-                session.add(User(username="admin", password=hash_password(default_pwd)))
+                session.add(User(username="admin", password=hash_password(default_pwd), is_admin=True))
                 await session.commit()
     except SQLAlchemyError:
         # If the schema has not been created yet, do not block app startup.
@@ -68,6 +68,7 @@ app.include_router(scoring.router)
 app.include_router(ai.router)
 app.include_router(card_evaluations.router)
 app.include_router(admin.router)
+app.include_router(reviews.router)
 app.include_router(analytics_router)
 
 
@@ -89,7 +90,8 @@ def _database_error_detail(exc: OperationalError) -> str:
     if code == 1054:
         return (
             "The database schema is behind the current code. Missing columns were detected in "
-            "the leads or opportunities tables. Run backend/migrations/004_add_scoring_and_archive_support.sql."
+            "the leads or opportunities tables. Run backend/migrations/004_add_scoring_and_archive_support.sql "
+            "and backend/migrations/005_add_admin_review_fields.sql."
         )
     if code in {2003, 2005}:
         return "Cannot connect to MySQL. Check that the service is running and the host/port settings are correct."
