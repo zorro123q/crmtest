@@ -233,3 +233,33 @@ class MetadataField(Base):
     is_visible = Column(Boolean, default=True)
     sort_order = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class CheckIn(TimestampMixin, Base):
+    """打卡记录表"""
+    __tablename__ = "checkins"
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    opportunity_id = Column(String(36), ForeignKey("opportunities.id", ondelete="SET NULL"), index=True)
+
+    # 位置信息
+    latitude = Column(Numeric(10, 7), nullable=False)
+    longitude = Column(Numeric(10, 7), nullable=False)
+    address = Column(String(500))
+    location_name = Column(String(255))
+
+    # 打卡类型：check_in(签到), check_out(签退), visit(拜访)
+    checkin_type = Column(String(30), nullable=False, default="visit")
+
+    # 备注
+    remark = Column(Text)
+
+    # 关联客户名称（冗余字段，方便查询）
+    customer_name = Column(String(255))
+
+    # 图片（可选，JSON数组存储图片URL）
+    images = Column(JSON, default=list)
+
+    user = relationship("User", foreign_keys=[user_id])
+    opportunity = relationship("Opportunity", foreign_keys=[opportunity_id])
