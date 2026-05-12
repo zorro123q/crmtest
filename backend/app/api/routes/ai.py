@@ -32,14 +32,17 @@ ALLOWED_AUDIO = {"audio/webm", "audio/mpeg", "audio/mp4", "audio/wav", "audio/og
 MAX_AUDIO_SIZE = 25 * 1024 * 1024
 REALTIME_SAMPLE_RATE = 16000
 REALTIME_AUDIO_CHUNK_SIZE = 1280
+REALTIME_AUDIO_CHUNK_INTERVAL_MS = 40
 REALTIME_SIGNED_URL_TTL_SECONDS = 60
 
 
 def _normalize_realtime_ws_url(ws_url: str) -> str:
     url = str(ws_url or "").strip()
     if url in {"wss://multirobot-test.kxjlcc.com", "wss://multirobot-test.kxjlcc.com/"}:
-        return "wss://multirobot-test.kxjlcc.com:18888"
-    return url
+        return "wss://multirobot-test.kxjlcc.com:18888/"
+    if url in {"wss://multirobot-test.kxjlcc.com:18888", "wss://multirobot-test.kxjlcc.com:18888/"}:
+        return "wss://multirobot-test.kxjlcc.com:18888/"
+    return url.split("?", 1)[0].rstrip("/") + "/"
 
 
 def _build_xfyun_realtime_url() -> tuple[str, int]:
@@ -67,8 +70,6 @@ def _build_xfyun_realtime_url() -> tuple[str, int]:
         "ts": ts,
         "signa": signa,
         "token": token,
-        "punc": settings.XFYUN_REALTIME_PUNC,
-        "engLangType": settings.XFYUN_REALTIME_ENG_LANG_TYPE,
     }
     base_url = ws_url.split("?", 1)[0].rstrip("/") + "/"
     return f"{base_url}?{urlencode(params)}", int(ts) + REALTIME_SIGNED_URL_TTL_SECONDS
@@ -154,6 +155,7 @@ async def realtime_transcribe_url(_: User = Depends(get_current_user)):
         "expires_at": expires_at,
         "sample_rate": REALTIME_SAMPLE_RATE,
         "chunk_size": REALTIME_AUDIO_CHUNK_SIZE,
+        "chunk_interval_ms": REALTIME_AUDIO_CHUNK_INTERVAL_MS,
         "max_duration_ms": 60000,
     }
 

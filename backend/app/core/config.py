@@ -30,6 +30,19 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     OPENAI_MODEL: str = "qwen-plus"
 
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 465
+    SMTP_USERNAME: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM: str | None = None
+    SMTP_USE_SSL: bool = True
+
+    REPORT_EMAIL_ENABLED: bool = False
+    REPORT_EMAIL_WEEKDAY: str = "fri"
+    REPORT_EMAIL_HOUR: int = 18
+    REPORT_EMAIL_MINUTE: int = 0
+    REPORT_EMAIL_TIMEZONE: str = "Asia/Shanghai"
+
     DASHSCOPE_API_KEY: str | None = None
     DASHSCOPE_BASE_URL: str = "https://dashscope.aliyuncs.com"
     PARAFORMER_MODEL: str = "paraformer-v2"
@@ -38,7 +51,7 @@ class Settings(BaseSettings):
     XFYUN_REALTIME_APP_ID: str ="pc20onli"
     XFYUN_REALTIME_API_KEY: str = "d9f4aa7ea6d94faca62cd88a28fd5234"
     XFYUN_REALTIME_TOKEN: str = "10003"
-    XFYUN_REALTIME_WS_URL: str = "wss://multirobot-test.kxjlcc.com"
+    XFYUN_REALTIME_WS_URL: str = "wss://multirobot-test.kxjlcc.com:18888"
     XFYUN_REALTIME_PUNC: str = "1"
     XFYUN_REALTIME_ENG_LANG_TYPE: str = "1"
 

@@ -29,6 +29,7 @@ from app.services.table_import_service import (
     import_error_message,
     parse_import_table,
 )
+from app.services.owner_identity_service import owner_name_matches_user, resolve_owner_id_by_name
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
 
@@ -161,19 +162,6 @@ def _validated_import_data(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _is_yes(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"是", "yes", "y", "true", "1", "通过", "pass", "passed"}
-
-
-async def _resolve_owner_id_by_name(db: AsyncSession, owner_name: str | None) -> str | None:
-    """
-    根据负责人姓名解析 owner_id。
-    如果系统中存在同名的已注册用户，返回该用户 id；否则返回 None。
-    """
-    text = str(owner_name or "").strip()
-    if not text:
-        return None
-    result = await db.execute(select(User).where(User.username == text))
-    user = result.scalar_one_or_none()
-    return str(user.id) if user else None
 
 
 def _is_no(value: str | None) -> bool:
@@ -344,7 +332,7 @@ async def import_leads(
             owner_name = payload["custom_fields"].get("business_owner")
             if owner_name:
                 # 尝试解析负责人 ID，如果未注册则保持 None
-                resolved_owner_id = await _resolve_owner_id_by_name(db, owner_name)
+                resolved_owner_id = await resolve_owner_id_by_name(db, owner_name)
                 payload["_owner_id_override"] = resolved_owner_id
                 # resolved_owner_id 是 None 时表示负责人未注册，不要 fallback 到 current_user.id
 
@@ -373,6 +361,11 @@ async def update_lead(
     current_user: User = Depends(get_current_user),
 ):
     lead = await _get_lead_or_403(lead_id, db, current_user)
+    if owner_name_matches_user(
+        current_user,
+        (lead.custom_fields or {}).get("business_owner"),
+    ) and str(lead.owner_id or "") != str(current_user.id):
+        lead.owner_id = current_user.id
     data = payload.model_dump(exclude_unset=True)
     _apply_lead_payload(lead, data)
 
@@ -407,6 +400,13 @@ async def _get_lead_or_403(lead_id: UUID, db: AsyncSession, current_user: User) 
     lead = result.scalar_one_or_none()
     if not lead:
         raise HTTPException(status_code=404, detail="线索不存在")
-    if not can_edit_owned_resource(current_user, lead.owner_id):
+    if not _can_edit_lead(current_user, lead):
         raise HTTPException(status_code=403, detail="你不能操作其他人的线索")
     return lead
+
+
+def _can_edit_lead(current_user: User, lead: Lead) -> bool:
+    if can_edit_owned_resource(current_user, lead.owner_id):
+        return True
+    custom_fields = lead.custom_fields or {}
+    return owner_name_matches_user(current_user, custom_fields.get("business_owner"))

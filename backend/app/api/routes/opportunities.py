@@ -47,6 +47,7 @@ from app.services.table_import_service import (
     import_error_message,
     parse_import_table,
 )
+from app.services.owner_identity_service import owner_name_matches_user, resolve_owner_id_by_name
 
 router = APIRouter(prefix="/api/opportunities", tags=["opportunities"])
 
@@ -180,6 +181,43 @@ def _merge_custom_fields(existing: dict | None, data: dict) -> dict:
     return merged
 
 
+def _normalize_history_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _append_solution_communication_history(
+    custom_fields: dict | None,
+    *,
+    previous_value: object = None,
+    next_value: object = None,
+    current_user: User,
+    changed_at: datetime,
+    force: bool = False,
+) -> dict:
+    merged = dict(custom_fields or {})
+    previous_text = _normalize_history_text(previous_value)
+    next_text = _normalize_history_text(next_value)
+
+    if not force and previous_text == next_text:
+        return merged
+    if force and not next_text:
+        return merged
+
+    raw_history = merged.get("solution_communication_history")
+    history = list(raw_history) if isinstance(raw_history, list) else []
+    history.append(
+        {
+            "previous": previous_text,
+            "value": next_text,
+            "changed_at": changed_at.isoformat(),
+            "changed_by_id": str(current_user.id),
+            "changed_by_name": current_user.username,
+        }
+    )
+    merged["solution_communication_history"] = history
+    return merged
+
+
 def _is_active_for_review(review_status: str | None, status: str | None) -> bool:
     if str(review_status or "").strip().lower() != "approved":
         return False
@@ -281,6 +319,13 @@ def _new_opportunity_from_data(data: dict, current_user: User) -> Opportunity:
         **scoring.dimensions,
     )
 
+    opportunity.custom_fields = _append_solution_communication_history(
+        opportunity.custom_fields,
+        next_value=opportunity.solution_communication,
+        current_user=current_user,
+        changed_at=now,
+        force=True,
+    )
     _sync_stage_state(opportunity, stage, now, override_probability=data.get("probability"))
     return opportunity
 
@@ -296,19 +341,6 @@ def _validated_import_data(payload: dict) -> dict:
 
 def _is_yes(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"是", "yes", "y", "true", "1", "已签订"}
-
-
-async def _resolve_owner_id_by_name(db: AsyncSession, owner_name: str | None) -> str | None:
-    """
-    根据负责人姓名解析 owner_id。
-    如果系统中存在同名的已注册用户，返回该用户 id；否则返回 None。
-    """
-    text = str(owner_name or "").strip()
-    if not text:
-        return None
-    result = await db.execute(select(User).where(User.username == text))
-    user = result.scalar_one_or_none()
-    return str(user.id) if user else None
 
 
 def _parse_import_amount(value: str | None) -> float | None:
@@ -571,7 +603,7 @@ async def import_opportunities(
             owner_name = raw_payload["custom_fields"].get("owner_name_display")
             if owner_name:
                 # 尝试解析负责人 ID，如果未注册则保持 None
-                resolved_owner_id = await _resolve_owner_id_by_name(db, owner_name)
+                resolved_owner_id = await resolve_owner_id_by_name(db, owner_name)
                 raw_payload["_owner_id_override"] = resolved_owner_id
                 # resolved_owner_id 是 None 时表示负责人未注册，不要 fallback 到 current_user.id
 
@@ -600,7 +632,13 @@ async def update_opportunity(
     current_user: User = Depends(get_current_user),
 ):
     opportunity = await _get_opp_or_403(opp_id, db, current_user)
+    if owner_name_matches_user(
+        current_user,
+        (opportunity.custom_fields or {}).get("owner_name_display"),
+    ) and str(opportunity.owner_id or "") != str(current_user.id):
+        opportunity.owner_id = current_user.id
 
+    previous_solution_communication = opportunity.solution_communication
     raw_data = payload.model_dump(exclude_unset=True)
     data = _normalize_business_payload(raw_data)
     custom_fields = data.pop("custom_fields", None)
@@ -645,6 +683,14 @@ async def update_opportunity(
         opportunity.custom_fields = {**(opportunity.custom_fields or {}), **custom_fields}
 
     opportunity.custom_fields = _merge_custom_fields(opportunity.custom_fields or {}, data)
+    if "solution_communication" in data:
+        opportunity.custom_fields = _append_solution_communication_history(
+            opportunity.custom_fields,
+            previous_value=previous_solution_communication,
+            next_value=opportunity.solution_communication,
+            current_user=current_user,
+            changed_at=datetime.now(timezone.utc),
+        )
 
     await db.commit()
     await db.refresh(opportunity)
@@ -700,6 +746,13 @@ async def _get_opp_or_403(opp_id: UUID, db: AsyncSession, current_user: User) ->
     opportunity = result.scalar_one_or_none()
     if not opportunity:
         raise HTTPException(status_code=404, detail="Opportunity not found")
-    if not can_edit_owned_resource(current_user, opportunity.owner_id):
+    if not _can_edit_opportunity(current_user, opportunity):
         raise HTTPException(status_code=403, detail="You cannot modify another user's opportunity")
     return opportunity
+
+
+def _can_edit_opportunity(current_user: User, opportunity: Opportunity) -> bool:
+    if can_edit_owned_resource(current_user, opportunity.owner_id):
+        return True
+    custom_fields = opportunity.custom_fields or {}
+    return owner_name_matches_user(current_user, custom_fields.get("owner_name_display"))
