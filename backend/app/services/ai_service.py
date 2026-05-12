@@ -219,9 +219,10 @@ def _get_openai_client() -> AsyncOpenAI:
 
 
 def _get_dashscope_api_key() -> str:
-    if not settings.DASHSCOPE_API_KEY:
-        raise RuntimeError("DASHSCOPE_API_KEY is not configured")
-    return settings.DASHSCOPE_API_KEY
+    api_key = settings.DASHSCOPE_API_KEY or settings.OPENAI_API_KEY
+    if not api_key:
+        raise RuntimeError("DASHSCOPE_API_KEY or OPENAI_API_KEY is not configured")
+    return api_key
 
 
 def _dashscope_headers(

@@ -136,8 +136,17 @@ def _amount_value(item) -> float:
 
 
 def _owner_username(item) -> str:
+    custom_fields = getattr(item, "custom_fields", None) or {}
     owner = getattr(item, "owner", None)
-    return str(getattr(owner, "username", None) or getattr(item, "owner_username", None) or "未分配").strip()
+
+    return str(
+        custom_fields.get("owner_name_display")
+        or custom_fields.get("business_owner")
+        or custom_fields.get("owner_name")
+        or getattr(owner, "username", None)
+        or getattr(item, "owner_username", None)
+        or "未分配"
+    ).strip()
 
 
 def _customer_type(item) -> str:
@@ -145,7 +154,7 @@ def _customer_type(item) -> str:
 
 
 def _is_old_customer_new_business(item) -> bool:
-    return _customer_type(item) in {"老客户", "老客户新部门"}
+    return _customer_type(item) in {"老客户", "老客户新部门", "老客户老部门"}
 
 
 def _is_new_customer_business(item) -> bool:
@@ -208,14 +217,16 @@ def _finalize_average(metrics: dict[str, int | float]) -> None:
 def _group_keys_for_item(
     item,
     *,
+    pioneer_leader_names: set[str],
+    charge_leader_names: set[str],
     pioneer_members: set[str],
     charge_members: set[str],
 ) -> list[str]:
     owner_username = _owner_username(item)
     group_keys = ["department"]
-    if owner_username == "陈祺":
+    if owner_username in pioneer_leader_names:
         group_keys.append("pioneer_leader")
-    if owner_username == "余浩然":
+    if owner_username in charge_leader_names:
         group_keys.append("charge_leader")
     if owner_username in pioneer_members:
         group_keys.append("pioneer_group")
@@ -228,6 +239,8 @@ def _build_module(
     opportunities: Iterable,
     *,
     customer_filter,
+    pioneer_leader_names: set[str],
+    charge_leader_names: set[str],
     pioneer_members: set[str],
     charge_members: set[str],
 ) -> dict[str, dict[str, int | float]]:
@@ -238,6 +251,8 @@ def _build_module(
             continue
         for group_key in _group_keys_for_item(
             item,
+            pioneer_leader_names=pioneer_leader_names,
+            charge_leader_names=charge_leader_names,
             pioneer_members=pioneer_members,
             charge_members=charge_members,
         ):
@@ -251,24 +266,120 @@ def _build_module(
 def build_target_report(
     opportunities: Iterable,
     *,
+    pioneer_leader_names: Iterable[str] | None = None,
+    charge_leader_names: Iterable[str] | None = None,
     pioneer_members: Iterable[str] | None = None,
     charge_members: Iterable[str] | None = None,
 ) -> dict[str, dict[str, dict[str, int | float]]]:
     opportunity_list = list(opportunities)
+    pioneer_leader_set = {str(item).strip() for item in (pioneer_leader_names or []) if str(item).strip()}
+    charge_leader_set = {str(item).strip() for item in (charge_leader_names or []) if str(item).strip()}
     pioneer_member_set = {str(item).strip() for item in (pioneer_members or []) if str(item).strip()}
     charge_member_set = {str(item).strip() for item in (charge_members or []) if str(item).strip()}
+
+    if not pioneer_leader_set:
+        pioneer_leader_set = {"陈祺", "陈棋"}
+    if not charge_leader_set:
+        charge_leader_set = {"余浩然"}
 
     return {
         "old_customer_new_business": _build_module(
             opportunity_list,
             customer_filter=_is_old_customer_new_business,
+            pioneer_leader_names=pioneer_leader_set,
+            charge_leader_names=charge_leader_set,
             pioneer_members=pioneer_member_set,
             charge_members=charge_member_set,
         ),
         "new_customer_business": _build_module(
             opportunity_list,
             customer_filter=_is_new_customer_business,
+            pioneer_leader_names=pioneer_leader_set,
+            charge_leader_names=charge_leader_set,
             pioneer_members=pioneer_member_set,
             charge_members=charge_member_set,
         ),
+    }
+
+
+def _get_week_label(dt: datetime) -> str:
+    """返回 ISO 周标签，例如 '2026-W18'"""
+    iso = dt.isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+
+def build_trend_report(
+    opportunities: Iterable,
+    *,
+    weeks: int = 12,
+    pioneer_leader_names: Iterable[str] | None = None,
+    charge_leader_names: Iterable[str] | None = None,
+    pioneer_members: Iterable[str] | None = None,
+    charge_members: Iterable[str] | None = None,
+) -> dict:
+    """构建按周统计的趋势数据，用于折线图展示。"""
+    now = _now_utc()
+    start = now - timedelta(weeks=weeks)
+
+    def _ensure_aware(dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    opportunity_list = [
+        item for item in opportunities
+        if getattr(item, "created_at", None) and _ensure_aware(item.created_at) >= start
+    ]
+
+    pioneer_leader_set = {str(item).strip() for item in (pioneer_leader_names or []) if str(item).strip()}
+    charge_leader_set = {str(item).strip() for item in (charge_leader_names or []) if str(item).strip()}
+    pioneer_member_set = {str(item).strip() for item in (pioneer_members or []) if str(item).strip()}
+    charge_member_set = {str(item).strip() for item in (charge_members or []) if str(item).strip()}
+
+    if not pioneer_leader_set:
+        pioneer_leader_set = {"陈祺", "陈棋"}
+    if not charge_leader_set:
+        charge_leader_set = {"余浩然"}
+
+    # 生成周标签列表
+    week_labels = []
+    current = start
+    while current <= now:
+        week_labels.append(_get_week_label(current))
+        current += timedelta(weeks=1)
+    if not week_labels or week_labels[-1] != _get_week_label(now):
+        week_labels.append(_get_week_label(now))
+
+    # 按周分组统计
+    def _empty_week_data() -> dict[str, int]:
+        return {"collected_info_count": 0, "signed_count": 0, "recognized_revenue": 0}
+
+    old_weekly: dict[str, dict] = {w: _empty_week_data() for w in week_labels}
+    new_weekly: dict[str, dict] = {w: _empty_week_data() for w in week_labels}
+
+    for item in opportunity_list:
+        created_at = getattr(item, "created_at", None)
+        if not created_at:
+            continue
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        week_key = _get_week_label(created_at)
+        if week_key not in old_weekly:
+            continue
+
+        is_old = _is_old_customer_new_business(item)
+        is_new = _is_new_customer_business(item)
+        if not is_old and not is_new:
+            continue
+
+        target = old_weekly if is_old else new_weekly
+        target[week_key]["collected_info_count"] += 1
+        if _is_signed(item):
+            target[week_key]["signed_count"] += 1
+            target[week_key]["recognized_revenue"] += _amount_value(item)
+
+    return {
+        "weeks": week_labels,
+        "old_customer_new_business": old_weekly,
+        "new_customer_business": new_weekly,
     }

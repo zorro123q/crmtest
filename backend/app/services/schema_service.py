@@ -255,11 +255,38 @@ async def _add_missing_columns(conn, table_name: str, existing: dict[str, str], 
     return added
 
 
+CHECKINS_TABLE_DDL = """
+CREATE TABLE IF NOT EXISTS checkins (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    opportunity_id VARCHAR(36),
+    latitude DECIMAL(10, 7) NOT NULL,
+    longitude DECIMAL(10, 7) NOT NULL,
+    address VARCHAR(500),
+    location_name VARCHAR(255),
+    checkin_type VARCHAR(30) NOT NULL DEFAULT 'visit',
+    remark TEXT,
+    customer_name VARCHAR(255),
+    images JSON,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_checkins_user_id (user_id),
+    INDEX idx_checkins_opportunity_id (opportunity_id),
+    INDEX idx_checkins_created_at (created_at),
+    CONSTRAINT fk_checkins_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_checkins_opportunity FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+"""
+
+
 async def ensure_runtime_schema():
     async with engine.begin() as conn:
         user_columns = await _show_columns(conn, "users")
         await _add_missing_columns(conn, "users", user_columns, USER_COLUMN_DEFINITIONS)
         await conn.execute(text("UPDATE users SET is_admin = 1 WHERE username = 'admin'"))
+
+        # 自动创建 checkins 表（如果不存在）
+        await conn.execute(text(CHECKINS_TABLE_DDL))
 
         lead_columns = await _show_columns(conn, "leads")
         if lead_columns.get("status", "").startswith("enum("):
