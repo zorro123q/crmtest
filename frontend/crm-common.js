@@ -404,10 +404,39 @@
   // -----------------------------------------------------------------------
   // 资源编辑权限判断
   // -----------------------------------------------------------------------
-  function canEditOwner(user, ownerId) {
+  var OWNER_NAME_TO_USERNAME = {
+    '王保三': 'bswang',
+    '臧春梅': 'cmzang',
+    '李鑫健': 'xjli',
+    '余浩然': 'hryv',
+    '陈棋': 'cq',
+    '陈祺': 'cq',
+    '杨序东': 'xdyang',
+    '杨序冬': 'xdyang',
+    '杨俊波': 'jbyang'
+  };
+  var OWNER_KEY_TO_USERNAME = Object.keys(OWNER_NAME_TO_USERNAME).reduce(function(mapping, name) {
+    mapping[normalizeOwnerKey(name)] = OWNER_NAME_TO_USERNAME[name];
+    return mapping;
+  }, {});
+
+  function normalizeOwnerKey(value) {
+    return String(value || '').replace(/\s+/g, '').toLowerCase();
+  }
+
+  function ownerNameMatchesUser(user, ownerName) {
+    if (!user || !ownerName) return false;
+    var ownerKey = normalizeOwnerKey(ownerName);
+    var usernameKey = normalizeOwnerKey(user.username);
+    if (!ownerKey || !usernameKey) return false;
+    return ownerKey === usernameKey || normalizeOwnerKey(OWNER_KEY_TO_USERNAME[ownerKey]) === usernameKey;
+  }
+
+  function canEditOwner(user, ownerId, ownerName) {
     if (!user) return false;
     if (isAdmin(user)) return true;
-    return String(user.id) === String(ownerId || '');
+    if (String(user.id) === String(ownerId || '')) return true;
+    return ownerNameMatchesUser(user, ownerName);
   }
 
   // -----------------------------------------------------------------------
@@ -426,6 +455,7 @@
     apiRequest:       apiRequest,
     getScoringOptions: getScoringOptions,
     canEditOwner:     canEditOwner,
+    ownerNameMatchesUser: ownerNameMatchesUser,
     escapeHtml:       escapeHtml,
     getApiBase:       getApiBase,
     getCurrentUser:   getCurrentUser,

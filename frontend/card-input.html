@@ -700,9 +700,9 @@ tbody tr:last-child td{
             <div class="record-box">
               <button type="button" class="record-btn" data-record-key="a">开始录音</button>
               <div class="record-status">
-                录音中
+                实时转写
                 <strong id="a-record-timer">00:00</strong>
-                <span id="a-record-hint">点击开始录音，再次点击结束并转写。</span>
+                <span id="a-record-hint">点击开始录音，再次点击结束并实时转写。</span>
               </div>
             </div>
             <div>
@@ -813,9 +813,9 @@ tbody tr:last-child td{
             <div class="record-box">
               <button type="button" class="record-btn" data-record-key="b">开始录音</button>
               <div class="record-status">
-                录音中
+                实时转写
                 <strong id="b-record-timer">00:00</strong>
-                <span id="b-record-hint">点击开始录音，再次点击结束并转写。</span>
+                <span id="b-record-hint">点击开始录音，再次点击结束并实时转写。</span>
               </div>
             </div>
             <div>
@@ -899,7 +899,7 @@ tbody tr:last-child td{
 (() => {
   const API = {
     evaluate: "/api/card-evaluations/evaluate",
-    transcribe: "/api/card-evaluations/transcribe"
+    realtimeTranscribeUrl: "/api/ai/realtime-transcribe-url"
   };
 
   /**
@@ -1476,95 +1476,591 @@ tbody tr:last-child td{
     setMode(cardKey, "hybrid");
   }
 
-  async function transcribeAudio(cardKey, audioBlob) {
-    const formData = new FormData();
-    formData.append("audio", audioBlob, `card-evaluation-${Date.now()}.webm`);
+  function setRecordState(cardKey, recordState, message) {
+    const config = CARD_CONFIG[cardKey];
+    const button = document.querySelector(`[data-record-key="${cardKey}"]`);
+    const timerEl = document.getElementById(config.recordTimerId);
+    const hintEl = document.getElementById(config.recordHintId);
 
-    showLoading("正在转写音频...");
-    try {
-      const result = await CRMApp.apiRequest(API.transcribe, {
-        method: "POST",
-        body: formData
-      });
-      const textarea = document.getElementById(CARD_CONFIG[cardKey].textId);
-      textarea.value = textarea.value.trim()
-        ? `${textarea.value.trim()}\n${result.text}`
-        : result.text;
-      clearAiCache(cardKey, "文本已变更，请重新运行 AI 识别。");
-      showToast("语音转写完成。");
-    } catch (error) {
-      showToast(error.message || "转写失败。");
-    } finally {
-      hideLoading();
+    button.classList.toggle("recording", recordState !== "idle");
+    button.disabled = recordState === "stopping";
+
+    const labels = {
+      idle: "开始录音",
+      connecting: "连接中...",
+      recording: "结束录音",
+      stopping: "结束中..."
+    };
+    const hints = {
+      idle: "点击开始录音，再次点击结束并实时转写。",
+      connecting: "正在申请麦克风权限并连接实时转写服务。",
+      recording: "实时转写中，识别文字会同步写入文本框。",
+      stopping: "正在结束并等待最终识别结果。"
+    };
+
+    button.textContent = labels[recordState] || labels.idle;
+    hintEl.textContent = message || hints[recordState] || hints.idle;
+    if (recordState === "idle") {
+      timerEl.textContent = "00:00";
     }
   }
 
-  function stopRecording() {
-    if (state.recorder) {
-      state.recorder.recorder.stop();
+  function startRecordTimer(session) {
+    clearInterval(session.timer);
+    session.timer = setInterval(() => {
+      session.seconds += 1;
+      document.getElementById(CARD_CONFIG[session.cardKey].recordTimerId).textContent =
+        `${String(Math.floor(session.seconds / 60)).padStart(2, "0")}:${String(session.seconds % 60).padStart(2, "0")}`;
+    }, 1000);
+  }
+
+  function renderRealtimeText(session) {
+    const transcript = `${session.finalText}${session.interimText}`.trim();
+    const textarea = document.getElementById(CARD_CONFIG[session.cardKey].textId);
+
+    if (session.baseText || transcript) {
+      textarea.value = session.baseText && transcript
+        ? `${session.baseText}\n${transcript}`
+        : (session.baseText || transcript);
+    }
+
+    if (transcript && !session.textChanged) {
+      session.textChanged = true;
+      clearAiCache(session.cardKey, "文本已变更，请重新运行 AI 识别。");
+    }
+  }
+
+  async function stopRecording() {
+    const session = state.recorder;
+    if (!session) return;
+
+    session.stopping = true;
+    setRecordState(session.cardKey, "stopping");
+
+    try {
+      const finalText = await session.client.stop(12000);
+      if (finalText) {
+        session.finalText = finalText;
+      }
+      session.interimText = "";
+      renderRealtimeText(session);
+      showToast(session.finalText ? "实时转写完成。" : "未收到识别文字。");
+    } catch (error) {
+      showToast(error.message || "停止实时转写失败。");
+    } finally {
+      session.client.destroy();
+      clearInterval(session.timer);
+      if (state.recorder === session) {
+        state.recorder = null;
+      }
+      setRecordState(session.cardKey, "idle");
     }
   }
 
   async function startRecording(cardKey) {
     if (state.recorder) {
-      showToast("Stop the current recording first.");
+      showToast("请先结束当前录音。");
       return;
     }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showToast("This browser does not support audio recording.");
+      showToast("当前浏览器不支持录音。");
       return;
     }
 
-    const config = CARD_CONFIG[cardKey];
+    const session = {
+      cardKey,
+      client: null,
+      baseText: getText(cardKey),
+      finalText: "",
+      interimText: "",
+      seconds: 0,
+      timer: null,
+      stopping: false,
+      textChanged: false
+    };
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks = [];
-      let seconds = 0;
-
-      const button = document.querySelector(`[data-record-key="${cardKey}"]`);
-      const timerEl = document.getElementById(config.recordTimerId);
-      const hintEl = document.getElementById(config.recordHintId);
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) chunks.push(event.data);
-      };
-
-      recorder.onstop = async () => {
-        clearInterval(state.recorder ? state.recorder.timer : null);
-        stream.getTracks().forEach((track) => track.stop());
-
-        button.classList.remove("recording");
-        button.textContent = "Start Recording";
-        timerEl.textContent = "00:00";
-        hintEl.textContent = "Click to start recording. Click again to stop and transcribe.";
+      setRecordState(cardKey, "connecting");
+      session.client = createRealtimeAsrClient({
+        onStarted: (sid) => {
+          if (state.recorder === session) {
+            setRecordState(cardKey, "recording", sid ? `已连接，sid: ${sid}` : "已连接，开始说话。");
+          }
+        },
+        onRecordStarted: () => {
+          if (state.recorder === session) {
+            setRecordState(cardKey, "recording", "麦克风已开始采集，识别文字会同步写入文本框。");
+            startRecordTimer(session);
+          }
+        },
+        onResult: (finalText, interimText) => {
+          if (state.recorder !== session) return;
+          session.finalText = finalText || "";
+          session.interimText = interimText || "";
+          renderRealtimeText(session);
+        },
+        onError: (message) => {
+          if (state.recorder !== session) return;
+          if (!session.stopping) {
+            showToast(message || "实时转写失败。");
+          }
+          clearInterval(session.timer);
+          state.recorder = null;
+          setRecordState(cardKey, "idle");
+        },
+        onClose: () => {
+          if (state.recorder === session && !session.stopping) {
+            clearInterval(session.timer);
+            state.recorder = null;
+            setRecordState(cardKey, "idle", "实时转写已关闭。");
+          }
+        },
+        onMaxDuration: () => {
+          showToast("实时转写达到最大时长，正在自动结束。");
+          stopRecording();
+        }
+      });
+      state.recorder = session;
+      await session.client.start();
+    } catch (error) {
+      const shouldNotify = state.recorder === session && !session.stopping;
+      if (session.client) {
+        session.client.destroy();
+      }
+      clearInterval(session.timer);
+      if (state.recorder === session) {
         state.recorder = null;
+      }
+      setRecordState(cardKey, "idle");
+      if (shouldNotify) {
+        showToast(error.message || "无法启动实时转写，请检查麦克风权限和语音服务配置。");
+      }
+    }
+  }
 
-        const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-        if (audioBlob.size < 100) {
-          showToast("The recording is too short.");
+  function createRealtimeAsrClient(options) {
+    const SAMPLE_RATE = 16000;
+    let chunkSize = 1280;
+    let sendIntervalMs = 40;
+    const maxSilenceMs = 14000;
+    let socket = null;
+    let mediaStream = null;
+    let audioContext = null;
+    let sourceNode = null;
+    let processorNode = null;
+    let wsReady = false;
+    let stopped = false;
+    let destroyed = false;
+    let pendingBytes = new Uint8Array(0);
+    let audioQueue = [];
+    let frameCount = 0;
+    let audioSendTimer = null;
+    let silenceTimer = null;
+    let stopTimer = null;
+    let maxTimer = null;
+    let stopResolve = null;
+    let stopReject = null;
+    let endSignalPending = false;
+    let endSignalSent = false;
+    const segMap = {};
+
+    function cleanup(closeSocket) {
+      stopAudioSendTimer();
+      if (silenceTimer) clearTimeout(silenceTimer);
+      if (stopTimer) clearTimeout(stopTimer);
+      if (maxTimer) clearTimeout(maxTimer);
+      silenceTimer = null;
+      stopTimer = null;
+      maxTimer = null;
+      stopAudio();
+      if (closeSocket !== false && socket) {
+        try { socket.close(); } catch (error) {}
+      }
+      socket = null;
+      wsReady = false;
+      audioQueue = [];
+      pendingBytes = new Uint8Array(0);
+      endSignalPending = false;
+    }
+
+    function stopAudioSendTimer() {
+      if (audioSendTimer) {
+        clearInterval(audioSendTimer);
+        audioSendTimer = null;
+      }
+    }
+
+    function stopAudio() {
+      stopAudioSendTimer();
+      if (processorNode) {
+        try { processorNode.disconnect(); } catch (error) {}
+        processorNode.onaudioprocess = null;
+        processorNode = null;
+      }
+      if (sourceNode) {
+        try { sourceNode.disconnect(); } catch (error) {}
+        sourceNode = null;
+      }
+      if (audioContext) {
+        try { audioContext.close(); } catch (error) {}
+        audioContext = null;
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach((track) => track.stop());
+        mediaStream = null;
+      }
+    }
+
+    function fail(message) {
+      const msg = message || "实时转写失败";
+      if (stopReject) {
+        const reject = stopReject;
+        stopResolve = null;
+        stopReject = null;
+        reject(new Error(msg));
+      }
+      cleanup();
+      if (typeof options.onError === "function") options.onError(msg);
+    }
+
+    function start() {
+      return CRMApp.apiRequest(API.realtimeTranscribeUrl)
+        .then((config) => {
+          if (destroyed || stopped) {
+            throw new Error("实时转写已取消");
+          }
+          chunkSize = Number(config && config.chunk_size) || chunkSize;
+          sendIntervalMs = Number(config && config.chunk_interval_ms) || sendIntervalMs;
+          const wsUrl = String(config && config.url || "");
+
+          return startAudio(Number(config && config.max_duration_ms) || 60000).then(() => (
+            new Promise((resolve, reject) => {
+              socket = new WebSocket(wsUrl);
+              socket.binaryType = "arraybuffer";
+
+              socket.onopen = () => {
+                wsReady = true;
+                startAudioSendTimer();
+                if (stopped) requestEndSignal();
+                resolve();
+              };
+              socket.onmessage = handleMessage;
+              socket.onerror = () => {
+                const error = new Error("WebSocket 连接失败");
+                reject(error);
+                fail(error.message);
+              };
+              socket.onclose = () => {
+                const fullText = buildMergedText().fullText;
+                if (stopResolve) {
+                  const resolveStop = stopResolve;
+                  stopResolve = null;
+                  stopReject = null;
+                  resolveStop(fullText);
+                }
+                cleanup(false);
+                if (typeof options.onClose === "function") options.onClose();
+              };
+            })
+          ));
+        });
+    }
+
+    function startAudio(maxDuration) {
+      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextCtor) {
+        return Promise.reject(new Error("当前浏览器不支持 Web Audio 录音"));
+      }
+
+      return navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      }).then((stream) => {
+        if (destroyed) throw new Error("实时转写已取消");
+        mediaStream = stream;
+        audioContext = new AudioContextCtor();
+        sourceNode = audioContext.createMediaStreamSource(stream);
+        processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+
+        processorNode.onaudioprocess = (event) => {
+          if (destroyed || stopped) return;
+          const input = event.inputBuffer.getChannelData(0);
+          const output = event.outputBuffer.getChannelData(0);
+          for (let i = 0; i < output.length; i += 1) output[i] = 0;
+
+          const downsampled = downsampleBuffer(input, audioContext.sampleRate, SAMPLE_RATE);
+          enqueuePcmBytes(floatTo16BitPCM(downsampled));
+        };
+
+        sourceNode.connect(processorNode);
+        processorNode.connect(audioContext.destination);
+        maxTimer = setTimeout(() => {
+          if (!destroyed && !stopped && typeof options.onMaxDuration === "function") {
+            options.onMaxDuration();
+          }
+        }, maxDuration);
+        if (typeof options.onRecordStarted === "function") options.onRecordStarted();
+      });
+    }
+
+    function enqueuePcmBytes(bytes) {
+      if (!bytes.length) return;
+      pendingBytes = concatBytes(pendingBytes, bytes);
+      while (pendingBytes.length >= chunkSize) {
+        audioQueue.push(pendingBytes.slice(0, chunkSize));
+        pendingBytes = pendingBytes.slice(chunkSize);
+      }
+      startAudioSendTimer();
+    }
+
+    function startAudioSendTimer() {
+      if (!wsReady || !socket || socket.readyState !== WebSocket.OPEN || audioSendTimer || endSignalSent) return;
+      sendOneAudioFrame();
+      if (audioQueue.length) {
+        audioSendTimer = setInterval(sendOneAudioFrame, sendIntervalMs);
+      }
+    }
+
+    function sendOneAudioFrame() {
+      if (!wsReady || !socket || socket.readyState !== WebSocket.OPEN) return;
+      if (!audioQueue.length) {
+        stopAudioSendTimer();
+        if (endSignalPending) sendEndSignal();
+        return;
+      }
+
+      const frame = audioQueue.shift();
+      if (!frame || frame.byteLength !== chunkSize) return;
+      socket.send(frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength));
+      frameCount += 1;
+      if (typeof options.onAudioFrame === "function") options.onAudioFrame(frameCount);
+      resetSilenceTimer();
+    }
+
+    function resetSilenceTimer() {
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        if (!stopped && wsReady) {
+          stopped = true;
+          stopAudio();
+          requestEndSignal();
+        }
+      }, maxSilenceMs);
+    }
+
+    function requestEndSignal() {
+      endSignalPending = true;
+      pendingBytes = new Uint8Array(0);
+      if (audioQueue.length) {
+        startAudioSendTimer();
+        return;
+      }
+      sendEndSignal();
+    }
+
+    function sendEndSignal() {
+      if (!socket || socket.readyState !== WebSocket.OPEN || !wsReady || endSignalSent) return;
+      endSignalPending = false;
+      endSignalSent = true;
+      socket.send(JSON.stringify({ end: true }));
+    }
+
+    function handleMessage(event) {
+      let message;
+      try {
+        message = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      } catch (error) {
+        return;
+      }
+
+      const action = String(message && message.action || "");
+      const code = String(message && message.code || "0");
+
+      if (action === "started") {
+        if (code !== "0") {
+          fail(message.desc || "实时转写握手失败");
+          return;
+        }
+        wsReady = true;
+        if (typeof options.onStarted === "function") options.onStarted(String(message.sid || ""));
+        startAudioSendTimer();
+        resetSilenceTimer();
+        if (stopped) requestEndSignal();
+        return;
+      }
+
+      if (action === "result") {
+        if (code !== "0") {
+          fail(message.desc || "实时转写返回错误");
           return;
         }
 
-        await transcribeAudio(cardKey, audioBlob);
-      };
+        const parsed = parseRealtimeData(message.data);
+        if (parsed.text) {
+          if (parsed.type === "0") {
+            segMap[parsed.segId] = parsed.text;
+            delete segMap[`${parsed.segId}_interim`];
+          } else {
+            segMap[`${parsed.segId}_interim`] = parsed.text;
+          }
 
-      recorder.start();
-      button.classList.add("recording");
-      button.textContent = "Stop Recording";
-      hintEl.textContent = "Recording. Click again to stop and transcribe.";
+          const merged = buildMergedText(parsed.segId);
+          if (typeof options.onResult === "function") {
+            options.onResult(merged.finalText, merged.interimText, merged.fullText);
+          }
+        }
 
-      const timer = setInterval(() => {
-        seconds += 1;
-        timerEl.textContent =
-          `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-      }, 1000);
+        if (parsed.isFinal && stopResolve) {
+          const resolveStop = stopResolve;
+          const fullText = buildMergedText().fullText;
+          stopResolve = null;
+          stopReject = null;
+          resolveStop(fullText);
+          cleanup();
+        }
+        return;
+      }
 
-      state.recorder = { cardKey, recorder, timer };
-    } catch (error) {
-      showToast("麦克风无法访问，请检查权限。");
+      if (action === "error") {
+        fail(message.desc || "实时转写服务端错误");
+      }
     }
+
+    function buildMergedText(currentSegId) {
+      const finalKeys = Object.keys(segMap)
+        .filter((key) => key.indexOf("_interim") === -1)
+        .map(Number)
+        .sort((a, b) => a - b);
+      const finalText = finalKeys.map((key) => segMap[key] || "").join("");
+      let interimText = "";
+
+      if (currentSegId !== undefined && segMap[`${currentSegId}_interim`]) {
+        interimText = segMap[`${currentSegId}_interim`];
+      } else {
+        const interimKeys = Object.keys(segMap).filter((key) => key.indexOf("_interim") > -1);
+        if (interimKeys.length) {
+          interimText = segMap[interimKeys[interimKeys.length - 1]] || "";
+        }
+      }
+
+      return {
+        finalText,
+        interimText,
+        fullText: `${finalText}${interimText}`.trim()
+      };
+    }
+
+    function stop(timeoutMs) {
+      stopped = true;
+      stopAudio();
+      return new Promise((resolve, reject) => {
+        if (!socket || socket.readyState === WebSocket.CLOSED) {
+          resolve(buildMergedText().fullText);
+          cleanup();
+          return;
+        }
+        stopResolve = resolve;
+        stopReject = reject;
+        if (wsReady) requestEndSignal();
+        stopTimer = setTimeout(() => {
+          if (stopResolve) {
+            const resolveStop = stopResolve;
+            stopResolve = null;
+            stopReject = null;
+            resolveStop(buildMergedText().fullText);
+            cleanup();
+          }
+        }, Number(timeoutMs) || 12000);
+      });
+    }
+
+    function destroy() {
+      destroyed = true;
+      if (stopResolve) {
+        const resolveStop = stopResolve;
+        stopResolve = null;
+        stopReject = null;
+        resolveStop(buildMergedText().fullText);
+      }
+      cleanup();
+    }
+
+    return { start, stop, destroy };
+  }
+
+  function parseRealtimeData(dataStr) {
+    try {
+      const obj = typeof dataStr === "string" ? JSON.parse(dataStr) : dataStr;
+      const st = obj && obj.cn && obj.cn.st;
+      const words = [];
+
+      if (st && Array.isArray(st.rt)) {
+        st.rt.forEach((rtItem) => {
+          (rtItem.ws || []).forEach((wsItem) => {
+            (wsItem.cw || []).forEach((cwItem) => {
+              const word = String(cwItem.w || "").trim();
+              if (word) words.push(word);
+            });
+          });
+        });
+      }
+
+      return {
+        text: words.join(""),
+        isFinal: !!(obj && obj.ls),
+        segId: Number(obj && obj.seg_id) || 0,
+        type: String(st && st.type || "0")
+      };
+    } catch (error) {
+      return { text: "", isFinal: false, segId: 0, type: "0" };
+    }
+  }
+
+  function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
+    if (inputSampleRate === outputSampleRate) return buffer;
+    const ratio = inputSampleRate / outputSampleRate;
+    const outputLength = Math.max(1, Math.round(buffer.length / ratio));
+    const output = new Float32Array(outputLength);
+    let offsetInput = 0;
+
+    for (let offsetOutput = 0; offsetOutput < outputLength; offsetOutput += 1) {
+      const nextOffsetInput = Math.round((offsetOutput + 1) * ratio);
+      let accum = 0;
+      let count = 0;
+      for (let i = offsetInput; i < nextOffsetInput && i < buffer.length; i += 1) {
+        accum += buffer[i];
+        count += 1;
+      }
+      output[offsetOutput] = count ? accum / count : 0;
+      offsetInput = nextOffsetInput;
+    }
+
+    return output;
+  }
+
+  function floatTo16BitPCM(float32Array) {
+    const buffer = new ArrayBuffer(float32Array.length * 2);
+    const view = new DataView(buffer);
+    for (let i = 0; i < float32Array.length; i += 1) {
+      const sample = Math.max(-1, Math.min(1, float32Array[i]));
+      const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+      view.setInt16(i * 2, intSample, true);
+    }
+    return new Uint8Array(buffer);
+  }
+
+  function concatBytes(left, right) {
+    if (!left.length) return right;
+    if (!right.length) return left;
+    const merged = new Uint8Array(left.length + right.length);
+    merged.set(left, 0);
+    merged.set(right, left.length);
+    return merged;
   }
 
   async function loadScoringFields() {
@@ -1633,7 +2129,7 @@ tbody tr:last-child td{
       button.addEventListener("click", async () => {
         const cardKey = button.dataset.recordKey;
         if (state.recorder && state.recorder.cardKey === cardKey) {
-          stopRecording();
+          await stopRecording();
           return;
         }
         await startRecording(cardKey);

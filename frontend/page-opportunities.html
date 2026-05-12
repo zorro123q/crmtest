@@ -114,7 +114,25 @@ body{
   width:260px;
   font-size:14px;
 }
-.search:focus,.input:focus,.select:focus,.textarea:focus{
+.toolbar-select{
+  min-height:40px;
+  width:180px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#fff;
+  color:var(--text);
+  font-size:14px;
+}
+.filter-control{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:var(--text2);
+  font-size:13px;
+  font-weight:700;
+}
+.search:focus,.toolbar-select:focus,.input:focus,.select:focus,.textarea:focus{
   outline:none;
   border-color:#7dd3fc;
   box-shadow:0 0 0 3px rgba(14,165,233,.12);
@@ -287,6 +305,20 @@ tbody tr:hover{
   gap:8px;
   flex-wrap:wrap;
 }
+.cell-sub{
+  margin-top:4px;
+  color:var(--text2);
+  font-size:12px;
+}
+.cell-history{
+  margin-top:6px;
+  padding:6px 8px;
+  border-radius:10px;
+  background:#f8fafc;
+  color:var(--text2);
+  font-size:12px;
+  line-height:1.6;
+}
 .empty{
   padding:36px 20px;
   text-align:center;
@@ -402,6 +434,77 @@ tbody tr:hover{
   font-size:12px;
   line-height:1.7;
 }
+.history-panel{
+  margin-top:12px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#f8fafc;
+}
+.history-title{
+  font-size:13px;
+  font-weight:800;
+  color:var(--text);
+  margin-bottom:10px;
+}
+.history-list{
+  display:grid;
+  gap:10px;
+}
+.history-item{
+  padding:10px 12px;
+  border-radius:12px;
+  background:#fff;
+  border:1px solid var(--border);
+}
+.history-meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  color:var(--text2);
+  font-size:12px;
+  margin-bottom:6px;
+}
+.history-content{
+  color:var(--text);
+  font-size:13px;
+  line-height:1.7;
+  white-space:pre-wrap;
+}
+.history-empty{
+  color:var(--text2);
+  font-size:13px;
+  line-height:1.7;
+}
+.solution-cell{
+  cursor:pointer;
+  color:var(--primary);
+  text-decoration:underline;
+}
+.solution-cell:hover{
+  color:var(--primary-dark);
+}
+.history-add-form{
+  margin-top:14px;
+  padding:14px;
+  border-top:1px solid var(--border);
+}
+.history-add-form label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text2);
+  margin-bottom:8px;
+}
+.history-add-row{
+  display:flex;
+  gap:10px;
+  align-items:flex-end;
+}
+.history-add-row .textarea{
+  flex:1;
+  min-height:60px;
+}
 .summary-grid{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -441,7 +544,8 @@ tbody tr:hover{
   .nav a{margin:0 0 6px}
   .topbar{position:static;flex-direction:column;align-items:flex-start}
   .toolbar{justify-content:flex-start}
-  .search{width:100%}
+  .search,.toolbar-select,.filter-control{width:100%}
+  .filter-control{align-items:flex-start;flex-direction:column}
   .stats,.form-grid,.form-grid-3,.summary-grid{grid-template-columns:1fr}
 }
 </style>
@@ -466,6 +570,10 @@ tbody tr:hover{
         <a href="page-report.html">商机通报</a>
       </div>
       <div class="nav-section">
+        <div class="nav-label">外勤管理</div>
+        <a href="page-checkin.html">位置打卡</a>
+      </div>
+      <div class="nav-section">
         <div class="nav-label">AI 能力</div>
         <a href="ai-input.html">AI 智能录入</a>
         <a href="card-input.html">价值评估</a>
@@ -488,6 +596,13 @@ tbody tr:hover{
       </div>
       <div class="toolbar">
         <input class="search" id="search-input" type="text" placeholder="搜索负责人、客户、产品、需求、项目类型">
+        <label class="filter-control" for="owner-filter">
+          <span>用户筛选</span>
+          <select class="toolbar-select" id="owner-filter">
+            <option value="all">全部用户</option>
+            <option value="me">只看我的商机</option>
+          </select>
+        </label>
         <button class="btn btn-ghost" id="refresh-btn">刷新</button>
         <button class="btn btn-ghost" id="bulk-approve-btn" style="display:none">批量审核通过</button>
         <button class="btn btn-ghost" id="bulk-reject-btn" style="display:none">批量驳回</button>
@@ -513,7 +628,7 @@ tbody tr:hover{
         <div class="stat-card">
           <div class="stat-label">我的商机</div>
           <div class="stat-value" id="stat-mine">0</div>
-          <div class="stat-hint">按 owner_id 匹配</div>
+          <div class="stat-hint">按 owner_id / 负责人名称匹配</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">已签订合同</div>
@@ -551,7 +666,7 @@ tbody tr:hover{
                 <th>商机等级</th>
                 <th>立项日期</th>
                 <th>项目组成员</th>
-                <th>解决方案沟通</th>
+                <th>解决方案沟通记录</th>
                 <th>POC测试情况</th>
                 <th>关键人认可</th>
                 <th>B卡中标概率</th>
@@ -570,6 +685,31 @@ tbody tr:hover{
       </section>
     </div>
   </main>
+
+  <div class="modal-overlay" id="solution-history-modal">
+    <div class="modal" style="max-width:680px">
+      <div class="modal-head">
+        <h3 id="solution-history-title">解决方案沟通记录</h3>
+        <button class="modal-close" id="solution-history-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-panel" style="margin-top:0">
+          <div class="history-title">历史记录</div>
+          <div class="history-list" id="solution-history-list"></div>
+        </div>
+        <div class="history-add-form" id="solution-add-form">
+          <label>新增沟通记录</label>
+          <div class="history-add-row">
+            <textarea class="textarea" id="solution-new-content" placeholder="请输入最新的解决方案沟通内容"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="solution-history-cancel">取消</button>
+        <button class="btn btn-primary" id="solution-history-save">保存记录</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modal-overlay" id="opp-modal">
     <div class="modal">
@@ -688,6 +828,10 @@ tbody tr:hover{
             <div class="form-group">
               <label for="opp-solution-communication">解决方案沟通情况</label>
               <textarea class="textarea" id="opp-solution-communication" placeholder="例如：项目沟通推进中"></textarea>
+              <div class="history-panel">
+                <div class="history-title">解决方案沟通历史</div>
+                <div class="history-list" id="opp-solution-history"></div>
+              </div>
             </div>
 
             <div class="form-group">
@@ -793,7 +937,7 @@ tbody tr:hover{
     </div>
   </div>
 
-<script src="crm-common.js"></script>
+<script src="crm-common.js?v=owner-fix-20260511"></script>
 <script>
 var currentUser = CRMApp.requireAuth('opportunities');
 var opportunities = [];
@@ -874,6 +1018,9 @@ function deriveStatusFromForm(data) {
 
 function normalizeOpportunity(item) {
   var custom = item.custom_fields || {};
+  var solutionHistory = Array.isArray(custom.solution_communication_history)
+    ? custom.solution_communication_history
+    : [];
 
   return {
     id: item.id,
@@ -891,6 +1038,7 @@ function normalizeOpportunity(item) {
     projectDate: item.project_date || custom.project_date || '',
     projectMembers: item.project_members || custom.project_members || '',
     solutionCommunication: item.solution_communication || custom.solution_communication || '',
+    solutionCommunicationHistory: solutionHistory,
     pocStatus: item.poc_status || custom.poc_status || '',
     keyPersonApproved: item.key_person_approved || custom.key_person_approved || custom.approve || '',
     bidProbability: item.bid_probability || custom.bid_probability || custom.bcard || '',
@@ -906,16 +1054,91 @@ function normalizeOpportunity(item) {
     stage: item.stage || '初步接触',
     status: item.status || 'new',
     updatedAt: item.updated_at || '',
+    createdAt: item.created_at || '',
     raw: item
   };
 }
 
 function canEditOpportunity(item) {
-  return CRMApp.canEditOwner(currentUser, item && item.ownerId);
+  return CRMApp.canEditOwner(currentUser, item && item.ownerId, item && item.ownerName);
 }
 
 function canDeleteOpportunity(item) {
-  return CRMApp.canEditOwner(currentUser, item.ownerId);
+  return CRMApp.canEditOwner(currentUser, item && item.ownerId, item && item.ownerName);
+}
+
+function normalizeOwnerFilterKey(value) {
+  return String(value || '').replace(/\s+/g, '').toLowerCase();
+}
+
+function getOpportunityOwnerDisplayName(item) {
+  var ownerName = (item && item.ownerName) || '';
+  return ownerName === '未分配' ? '' : ownerName;
+}
+
+function getOpportunityOwnerFilterValue(item) {
+  if (item && item.ownerId) return 'id:' + item.ownerId;
+  var ownerName = getOpportunityOwnerDisplayName(item);
+  return ownerName ? 'name:' + normalizeOwnerFilterKey(ownerName) : 'unassigned';
+}
+
+function isMyOpportunity(item) {
+  return String(item && item.ownerId) === String(currentUser.id)
+    || CRMApp.ownerNameMatchesUser(currentUser, getOpportunityOwnerDisplayName(item));
+}
+
+function matchesOwnerFilter(item, filterValue) {
+  var value = filterValue || 'all';
+  if (value === 'all') return true;
+  if (value === 'me') return isMyOpportunity(item);
+  if (value === 'unassigned') return getOpportunityOwnerFilterValue(item) === 'unassigned';
+  if (value.indexOf('id:') === 0) return String(item && item.ownerId) === value.slice(3);
+  if (value.indexOf('name:') === 0) {
+    return normalizeOwnerFilterKey(getOpportunityOwnerDisplayName(item)) === value.slice(5);
+  }
+  return true;
+}
+
+function refreshOwnerFilterOptions() {
+  var select = document.getElementById('owner-filter');
+  var selectedValue = select.value || 'all';
+  var owners = new Map();
+  var hasUnassigned = false;
+
+  opportunities.forEach(function(item) {
+    var value = getOpportunityOwnerFilterValue(item);
+    if (value === 'unassigned') {
+      hasUnassigned = true;
+      return;
+    }
+    if (!owners.has(value)) {
+      owners.set(value, getOpportunityOwnerDisplayName(item) || item.ownerName || '未命名负责人');
+    }
+  });
+
+  var options = [
+    '<option value="all">全部用户</option>',
+    '<option value="me">只看我的商机</option>'
+  ];
+
+  if (hasUnassigned) {
+    options.push('<option value="unassigned">未分配用户</option>');
+  }
+
+  Array.from(owners.entries())
+    .sort(function(left, right) { return left[1].localeCompare(right[1], 'zh-CN'); })
+    .forEach(function(entry) {
+      options.push(
+        '<option value="' + CRMApp.escapeHtml(entry[0]) + '">' +
+          CRMApp.escapeHtml(entry[1]) +
+        '</option>'
+      );
+    });
+
+  select.innerHTML = options.join('');
+  select.value = Array.from(select.options).some(function(option) {
+    return option.value === selectedValue;
+  }) ? selectedValue : 'all';
 }
 
 function getSearchText(item) {
@@ -967,6 +1190,7 @@ async function loadOpportunities() {
     }
 
     opportunities = allRows.map(normalizeOpportunity);
+    refreshOwnerFilterOptions();
     applyFilter();
   } catch (error) {
     console.error(error);
@@ -976,8 +1200,10 @@ async function loadOpportunities() {
 
 function applyFilter() {
   var keyword = document.getElementById('search-input').value.trim().toLowerCase();
+  var ownerFilter = document.getElementById('owner-filter').value || 'all';
 
   filteredOpportunities = opportunities.filter(function(item) {
+    if (!matchesOwnerFilter(item, ownerFilter)) return false;
     if (!keyword) return true;
     return getSearchText(item).indexOf(keyword) >= 0;
   });
@@ -989,7 +1215,7 @@ function applyFilter() {
 function renderStats() {
   var total = filteredOpportunities.length;
   var mine = filteredOpportunities.filter(function(item) {
-    return String(item.ownerId) === String(currentUser.id);
+    return isMyOpportunity(item);
   }).length;
   var signed = filteredOpportunities.filter(function(item) {
     return item.contractSigned === '是';
@@ -1003,6 +1229,31 @@ function renderStats() {
   document.getElementById('stat-signed').textContent = signed;
   document.getElementById('stat-high').textContent = high;
   document.getElementById('result-count').textContent = total + ' 条记录';
+}
+
+function getLatestSolutionHistory(item) {
+  var history = item && Array.isArray(item.solutionCommunicationHistory)
+    ? item.solutionCommunicationHistory.slice()
+    : [];
+  if (!history.length) return null;
+  history.sort(function(left, right) {
+    return new Date(right.changed_at || 0).getTime() - new Date(left.changed_at || 0).getTime();
+  });
+  return history[0] || null;
+}
+
+function renderSolutionHistoryCell(item) {
+  var historyCount = Array.isArray(item.solutionCommunicationHistory) ? item.solutionCommunicationHistory.length : 0;
+  var currentContent = item.solutionCommunication || '';
+  var parts = ['<div class="solution-cell" onclick="openSolutionHistoryModal(\'' + item.id + '\')">'];
+  parts.push('<div>' + CRMApp.escapeHtml(currentContent || '-') + '</div>');
+  if (historyCount > 0) {
+    parts.push('<div class="cell-history"><div>历史 ' + historyCount + ' 条（点击查看）</div></div>');
+  } else {
+    parts.push('<div class="cell-history"><div>点击查看/新增记录</div></div>');
+  }
+  parts.push('</div>');
+  return parts.join('');
 }
 
 function renderTable() {
@@ -1040,7 +1291,7 @@ function renderTable() {
       +   '<td><span class="' + getLevelClass(item.opportunityLevel) + '">' + CRMApp.escapeHtml(item.opportunityLevel || '-') + '</span></td>'
       +   '<td>' + CRMApp.escapeHtml(item.projectDate || '-') + '</td>'
       +   '<td>' + CRMApp.escapeHtml(item.projectMembers || '-') + '</td>'
-      +   '<td>' + CRMApp.escapeHtml(item.solutionCommunication || '-') + '</td>'
+      +   '<td>' + renderSolutionHistoryCell(item) + '</td>'
       +   '<td>' + CRMApp.escapeHtml(item.pocStatus || '-') + '</td>'
       +   '<td><span class="' + getBoolClass(item.keyPersonApproved) + '">' + CRMApp.escapeHtml(item.keyPersonApproved || '-') + '</span></td>'
       +   '<td><span class="' + getLevelClass(item.bidProbability) + '">' + CRMApp.escapeHtml(item.bidProbability || '-') + '</span></td>'
@@ -1202,6 +1453,53 @@ function setFormReadOnly(readOnly) {
   document.getElementById('opp-owner-display').classList.add('readonly');
 }
 
+function normalizeHistoryDate(value) {
+  if (!value) return '';
+  try {
+    return new Date(value).toLocaleString('zh-CN');
+  } catch (error) {
+    return value || '';
+  }
+}
+
+function renderSolutionCommunicationHistory(item) {
+  var container = document.getElementById('opp-solution-history');
+  var history = item && Array.isArray(item.solutionCommunicationHistory)
+    ? item.solutionCommunicationHistory.slice()
+    : [];
+
+  if (!history.length && item && item.solutionCommunication) {
+    history = [{
+      value: item.solutionCommunication,
+      changed_at: item.updatedAt || item.createdAt || '',
+      changed_by_name: item.ownerName || ''
+    }];
+  }
+
+  if (!history.length) {
+    container.innerHTML = '<div class="history-empty">暂无解决方案沟通历史。</div>';
+    return;
+  }
+
+  history.sort(function(left, right) {
+    return new Date(right.changed_at || 0).getTime() - new Date(left.changed_at || 0).getTime();
+  });
+
+  container.innerHTML = history.map(function(entry) {
+    var value = entry.value || '已清空';
+    var previous = entry.previous ? '<div class="history-content" style="color:var(--text2);margin-bottom:4px;">上一版：' + CRMApp.escapeHtml(entry.previous) + '</div>' : '';
+    return ''
+      + '<div class="history-item">'
+      +   '<div class="history-meta">'
+      +     '<span>' + CRMApp.escapeHtml(normalizeHistoryDate(entry.changed_at) || '-') + '</span>'
+      +     '<span>' + CRMApp.escapeHtml(entry.changed_by_name || '未知用户') + '</span>'
+      +   '</div>'
+      +   previous
+      +   '<div class="history-content">' + CRMApp.escapeHtml(value) + '</div>'
+      + '</div>';
+  }).join('');
+}
+
 function fillForm(item, readOnly) {
   var values = item || {
     ownerName: currentUser.username || '',
@@ -1221,7 +1519,8 @@ function fillForm(item, readOnly) {
     contractNegotiation: '',
     projectType: '',
     contractSigned: '',
-    handoffCompleted: ''
+    handoffCompleted: '',
+    solutionCommunicationHistory: []
   };
 
   document.getElementById('opp-owner-display').value = values.ownerName || currentUser.username || '';
@@ -1244,6 +1543,7 @@ function fillForm(item, readOnly) {
   document.getElementById('opp-handoff-completed').value = values.handoffCompleted || '';
 
   setFormReadOnly(readOnly);
+  renderSolutionCommunicationHistory(values);
   updateDuplicateWarning();
   fillSummary();
 }
@@ -1513,14 +1813,105 @@ async function importOpportunityFile(file) {
   }
 }
 
+var currentSolutionOppId = null;
+
+function openSolutionHistoryModal(id) {
+  var item = opportunities.find(function(entry) {
+    return entry.id === id;
+  });
+  if (!item) return;
+
+  currentSolutionOppId = id;
+  var title = document.getElementById('solution-history-title');
+  var list = document.getElementById('solution-history-list');
+  var newContent = document.getElementById('solution-new-content');
+  var canEdit = canEditOpportunity(item);
+
+  title.textContent = '解决方案沟通记录 - ' + (item.customerName || '未知客户');
+
+  var history = Array.isArray(item.solutionCommunicationHistory)
+    ? item.solutionCommunicationHistory.slice()
+    : [];
+
+  if (!history.length && item.solutionCommunication) {
+    history = [{
+      value: item.solutionCommunication,
+      changed_at: item.updatedAt || item.createdAt || '',
+      changed_by_name: item.ownerName || ''
+    }];
+  }
+
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">暂无解决方案沟通记录。</div>';
+  } else {
+    history.sort(function(left, right) {
+      return new Date(right.changed_at || 0).getTime() - new Date(left.changed_at || 0).getTime();
+    });
+
+    list.innerHTML = history.map(function(entry, index) {
+      var value = entry.value || '已清空';
+      var previous = entry.previous ? '<div class="history-content" style="color:var(--text2);margin-bottom:4px;">上一版：' + CRMApp.escapeHtml(entry.previous) + '</div>' : '';
+      return ''
+        + '<div class="history-item">'
+        +   '<div class="history-meta">'
+        +     '<span>#' + (history.length - index) + '</span>'
+        +     '<span>' + CRMApp.escapeHtml(normalizeHistoryDate(entry.changed_at) || '-') + '</span>'
+        +     '<span>' + CRMApp.escapeHtml(entry.changed_by_name || '未知用户') + '</span>'
+        +   '</div>'
+        +   previous
+        +   '<div class="history-content">' + CRMApp.escapeHtml(value) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  newContent.value = '';
+  document.getElementById('solution-add-form').style.display = canEdit ? '' : 'none';
+  document.getElementById('solution-history-save').style.display = canEdit ? '' : 'none';
+  document.getElementById('solution-history-modal').classList.add('active');
+}
+
+function closeSolutionHistoryModal() {
+  document.getElementById('solution-history-modal').classList.remove('active');
+  currentSolutionOppId = null;
+}
+
+async function saveSolutionHistory() {
+  if (!currentSolutionOppId) return;
+
+  var newContent = document.getElementById('solution-new-content').value.trim();
+  if (!newContent) {
+    alert('请输入沟通记录内容');
+    return;
+  }
+
+  try {
+    await CRMApp.apiRequest('/api/opportunities/' + currentSolutionOppId, {
+      method: 'PATCH',
+      body: {
+        solution_communication: newContent
+      }
+    });
+    closeSolutionHistoryModal();
+    await loadOpportunities();
+  } catch (error) {
+    alert(error.message || '保存记录失败');
+  }
+}
+
 async function initPage() {
   if (!currentUser) return;
+  try {
+    currentUser = await CRMApp.apiRequest('/api/auth/me');
+  } catch (error) {
+    return;
+  }
   setUserUI();
   initReviewControls();
   await loadOpportunities();
 }
 
 document.getElementById('search-input').addEventListener('input', applyFilter);
+document.getElementById('owner-filter').addEventListener('change', applyFilter);
 document.getElementById('refresh-btn').addEventListener('click', loadOpportunities);
 document.getElementById('bulk-approve-btn').addEventListener('click', function() {
   batchReviewOpportunities('approved');
@@ -1572,6 +1963,13 @@ document.getElementById('save-btn').addEventListener('click', function() {
     updateDuplicateWarning();
     fillSummary();
   });
+});
+
+document.getElementById('solution-history-close').addEventListener('click', closeSolutionHistoryModal);
+document.getElementById('solution-history-cancel').addEventListener('click', closeSolutionHistoryModal);
+document.getElementById('solution-history-save').addEventListener('click', saveSolutionHistory);
+document.getElementById('solution-history-modal').addEventListener('click', function(event) {
+  if (event.target === this) closeSolutionHistoryModal();
 });
 
 document.getElementById('opp-modal').addEventListener('click', function(event) {

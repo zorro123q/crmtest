@@ -484,6 +484,7 @@ async function stopRealtimeRecord() {
 function createRealtimeAsrClient(options) {
   var SAMPLE_RATE = 16000;
   var CHUNK_SIZE = 1280;
+  var SEND_INTERVAL_MS = 40;
   var MAX_SILENCE_MS = 14000;
   var socket = null;
   var mediaStream = null;
@@ -497,14 +498,19 @@ function createRealtimeAsrClient(options) {
   var audioQueue = [];
   var frameCount = 0;
   var totalBytes = 0;
+  var audioSendTimer = null;
+  var lastFrameSendAt = null;
   var silenceTimer = null;
   var stopTimer = null;
   var maxTimer = null;
   var stopResolve = null;
   var stopReject = null;
+  var endSignalPending = false;
+  var endSignalSent = false;
   var segMap = {};
 
   function cleanup(closeSocket) {
+    stopAudioSendTimer();
     if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
     if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
     if (maxTimer) { clearTimeout(maxTimer); maxTimer = null; }
@@ -516,9 +522,20 @@ function createRealtimeAsrClient(options) {
     wsReady = false;
     audioQueue = [];
     pendingBytes = new Uint8Array(0);
+    lastFrameSendAt = null;
+    endSignalPending = false;
+  }
+
+  function stopAudioSendTimer() {
+    if (audioSendTimer) {
+      clearInterval(audioSendTimer);
+      audioSendTimer = null;
+      console.log('[ASR] audio send timer stop');
+    }
   }
 
   function stopAudio() {
+    stopAudioSendTimer();
     if (processorNode) {
       try { processorNode.disconnect(); } catch (e) {}
       processorNode.onaudioprocess = null;
@@ -554,26 +571,31 @@ function createRealtimeAsrClient(options) {
     return CRMApp.apiRequest('/api/ai/realtime-transcribe-url')
       .then(function(config) {
         CHUNK_SIZE = Number(config && config.chunk_size) || CHUNK_SIZE;
-        return new Promise(function(resolve, reject) {
-          socket = new WebSocket(config.url);
+        SEND_INTERVAL_MS = Number(config && config.chunk_interval_ms) || SEND_INTERVAL_MS;
+        var wsUrl = String(config && config.url || '');
+        logWebSocketUrl(wsUrl);
+        return startAudio(Number(config && config.max_duration_ms) || 60000).then(function() {
+          return new Promise(function(resolve, reject) {
+          socket = new WebSocket(wsUrl);
           socket.binaryType = 'arraybuffer';
 
           socket.onopen = function() {
-            startAudio(Number(config && config.max_duration_ms) || 60000)
-              .then(resolve)
-              .catch(function(error) {
-                cleanup();
-                reject(error);
-              });
+            console.log('[ASR] ws open');
+            wsReady = true;
+            startAudioSendTimer();
+            if (stopped) requestEndSignal();
+            resolve();
           };
 
           socket.onmessage = handleMessage;
-          socket.onerror = function() {
+          socket.onerror = function(event) {
+            console.error('[ASR] ws error:', event);
             var error = new Error('WebSocket 连接失败');
             reject(error);
             fail(error.message);
           };
-          socket.onclose = function() {
+          socket.onclose = function(event) {
+            console.log('[ASR] ws close:', event && event.code, event && event.reason);
             var fullText = buildMergedText().fullText;
             if (stopResolve) {
               var resolveStop = stopResolve;
@@ -585,7 +607,18 @@ function createRealtimeAsrClient(options) {
             if (typeof options.onClose === 'function') options.onClose();
           };
         });
+        });
       });
+  }
+
+  function logWebSocketUrl(wsUrl) {
+    try {
+      var parsed = new URL(wsUrl);
+      console.log('[ASR] ws url host/path:', parsed.host, parsed.pathname);
+      console.log('[ASR] ws url params:', Array.from(parsed.searchParams.keys()));
+    } catch (error) {
+      console.warn('[ASR] invalid ws url:', error);
+    }
   }
 
   function startAudio(maxDuration) {
@@ -605,6 +638,7 @@ function createRealtimeAsrClient(options) {
       if (destroyed) throw new Error('实时转写已取消');
       mediaStream = stream;
       audioContext = new AudioContextCtor();
+      console.log('[ASR] audioContext.sampleRate:', audioContext.sampleRate);
       sourceNode = audioContext.createMediaStreamSource(stream);
       processorNode = audioContext.createScriptProcessor(4096, 1, 1);
 
@@ -614,8 +648,11 @@ function createRealtimeAsrClient(options) {
         var output = event.outputBuffer.getChannelData(0);
         for (var i = 0; i < output.length; i += 1) output[i] = 0;
 
-        var pcm = downsampleTo16BitPcm(input, audioContext.sampleRate, SAMPLE_RATE);
-        enqueueAudio(pcm);
+        var downsampled = downsampleBuffer(input, audioContext.sampleRate, SAMPLE_RATE);
+        var pcmBytes = floatTo16BitPCM(downsampled);
+        console.log('[ASR] downsampled.length:', downsampled.length);
+        console.log('[ASR] pcmBytes.length:', pcmBytes.length);
+        enqueuePcmBytes(pcmBytes);
       };
 
       sourceNode.connect(processorNode);
@@ -629,45 +666,91 @@ function createRealtimeAsrClient(options) {
     });
   }
 
-  function enqueueAudio(buffer) {
-    var incoming = new Uint8Array(buffer);
+  function enqueuePcmBytes(bytes) {
+    var incoming = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     if (!incoming.length) return;
 
     pendingBytes = concatBytes(pendingBytes, incoming);
     while (pendingBytes.length >= CHUNK_SIZE) {
       var chunk = pendingBytes.slice(0, CHUNK_SIZE);
       pendingBytes = pendingBytes.slice(CHUNK_SIZE);
-      audioQueue.push(chunk.buffer);
-      frameCount += 1;
-      totalBytes += chunk.byteLength;
-      if (typeof options.onAudioFrame === 'function') {
-        options.onAudioFrame(frameCount, totalBytes);
-      }
+      audioQueue.push(chunk);
     }
-    flushAudioQueue();
+    startAudioSendTimer();
   }
 
-  function flushAudioQueue() {
+  function startAudioSendTimer() {
     if (!wsReady || !socket || socket.readyState !== WebSocket.OPEN) return;
-    while (audioQueue.length) {
-      socket.send(audioQueue.shift());
-      resetSilenceTimer();
+    if (audioSendTimer) {
+      console.log('[ASR] audio send timer already running');
+      return;
     }
+    console.log('[ASR] audio send timer start interval:', SEND_INTERVAL_MS + 'ms');
+    sendOneAudioFrame();
+    if (!audioQueue.length || endSignalSent) return;
+    audioSendTimer = setInterval(sendOneAudioFrame, SEND_INTERVAL_MS);
+  }
+
+  function sendOneAudioFrame() {
+    if (!wsReady || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!audioQueue.length) {
+      stopAudioSendTimer();
+      if (endSignalPending) sendEndSignal();
+      return;
+    }
+    var frame = audioQueue.shift();
+    if (!(frame instanceof Uint8Array)) frame = new Uint8Array(frame);
+    if (frame.byteLength !== CHUNK_SIZE) {
+      console.warn('[ASR] skip invalid pcm frame bytes:', frame.byteLength);
+      return;
+    }
+    var now = performance.now();
+    var interval = lastFrameSendAt ? Math.round(now - lastFrameSendAt) : SEND_INTERVAL_MS;
+    lastFrameSendAt = now;
+    var frameBuffer = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength);
+    socket.send(frameBuffer);
+    frameCount += 1;
+    totalBytes += frame.byteLength;
+    console.log('[ASR] downsampled samples:', frame.byteLength / 2);
+    console.log('[ASR] pcm bytes:', frame.byteLength);
+    console.log('[ASR] send pcm frame bytes:', frame.byteLength, 'interval:', interval + 'ms');
+    if (typeof options.onAudioFrame === 'function') {
+      options.onAudioFrame(frameCount, totalBytes);
+    }
+    resetSilenceTimer();
   }
 
   function resetSilenceTimer() {
     if (silenceTimer) clearTimeout(silenceTimer);
     silenceTimer = setTimeout(function() {
-      if (!stopped && wsReady) sendEndSignal();
+      if (!stopped && wsReady) {
+        stopped = true;
+        stopAudio();
+        requestEndSignal();
+      }
     }, MAX_SILENCE_MS);
   }
 
+  function requestEndSignal() {
+    endSignalPending = true;
+    pendingBytes = new Uint8Array(0);
+    if (audioQueue.length) {
+      startAudioSendTimer();
+      return;
+    }
+    sendEndSignal();
+  }
+
   function sendEndSignal() {
-    if (!socket || socket.readyState !== WebSocket.OPEN || !wsReady) return;
-    socket.send(stringToArrayBuffer(JSON.stringify({ end: true })));
+    if (!socket || socket.readyState !== WebSocket.OPEN || !wsReady || endSignalSent) return;
+    endSignalPending = false;
+    endSignalSent = true;
+    console.log('[ASR] send end');
+    socket.send(JSON.stringify({ end: true }));
   }
 
   function handleMessage(event) {
+    console.log('[ASR] ws message:', event.data);
     var message;
     try {
       message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
@@ -679,22 +762,24 @@ function createRealtimeAsrClient(options) {
     var code = String(message && message.code || '0');
     if (action === 'started') {
       if (code !== '0') {
+        console.error('[ASR] ws nonzero started:', message);
         fail(message.desc || '实时转写握手失败');
         return;
       }
       wsReady = true;
       if (typeof options.onStarted === 'function') options.onStarted(String(message.sid || ''));
-      flushAudioQueue();
+      startAudioSendTimer();
       resetSilenceTimer();
       if (stopped) {
-        flushAudioQueue();
-        sendEndSignal();
+        startAudioSendTimer();
+        requestEndSignal();
       }
       return;
     }
 
     if (action === 'result') {
       if (code !== '0') {
+        console.error('[ASR] ws nonzero result:', message);
         fail(message.desc || '实时转写返回错误');
         return;
       }
@@ -723,6 +808,7 @@ function createRealtimeAsrClient(options) {
     }
 
     if (action === 'error') {
+      console.error('[ASR] ws service error:', message);
       fail(message.desc || '实时转写服务端错误');
     }
   }
@@ -750,13 +836,6 @@ function createRealtimeAsrClient(options) {
   function stop(timeoutMs) {
     stopped = true;
     stopAudio();
-    if (pendingBytes.length) {
-      audioQueue.push(pendingBytes.buffer);
-      pendingBytes = new Uint8Array(0);
-    }
-    flushAudioQueue();
-    if (wsReady) sendEndSignal();
-
     return new Promise(function(resolve, reject) {
       if (!socket || socket.readyState === WebSocket.CLOSED) {
         resolve(buildMergedText().fullText);
@@ -765,6 +844,7 @@ function createRealtimeAsrClient(options) {
       }
       stopResolve = resolve;
       stopReject = reject;
+      if (wsReady) requestEndSignal();
       stopTimer = setTimeout(function() {
         if (stopResolve) {
           var resolveStop = stopResolve;
@@ -817,26 +897,37 @@ function parseRealtimeData(dataStr) {
   }
 }
 
-function downsampleTo16BitPcm(input, inputSampleRate, outputSampleRate) {
+function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
+  if (inputSampleRate === outputSampleRate) return buffer;
   var ratio = inputSampleRate / outputSampleRate;
-  var outputLength = Math.max(1, Math.round(input.length / ratio));
-  var output = new Int16Array(outputLength);
+  var outputLength = Math.max(1, Math.round(buffer.length / ratio));
+  var output = new Float32Array(outputLength);
   var offsetInput = 0;
 
   for (var offsetOutput = 0; offsetOutput < outputLength; offsetOutput += 1) {
     var nextOffsetInput = Math.round((offsetOutput + 1) * ratio);
     var accum = 0;
     var count = 0;
-    for (var i = offsetInput; i < nextOffsetInput && i < input.length; i += 1) {
-      accum += input[i];
+    for (var i = offsetInput; i < nextOffsetInput && i < buffer.length; i += 1) {
+      accum += buffer[i];
       count += 1;
     }
-    var sample = Math.max(-1, Math.min(1, count ? accum / count : 0));
-    output[offsetOutput] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    output[offsetOutput] = count ? accum / count : 0;
     offsetInput = nextOffsetInput;
   }
 
-  return output.buffer;
+  return output;
+}
+
+function floatTo16BitPCM(float32Array) {
+  var buffer = new ArrayBuffer(float32Array.length * 2);
+  var view = new DataView(buffer);
+  for (var i = 0; i < float32Array.length; i += 1) {
+    var sample = Math.max(-1, Math.min(1, float32Array[i]));
+    var intSample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    view.setInt16(i * 2, intSample, true);
+  }
+  return new Uint8Array(buffer);
 }
 
 function concatBytes(left, right) {

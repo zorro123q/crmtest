@@ -153,7 +153,19 @@ body{
   font-size:14px;
 }
 
+.toolbar-select{
+  min-height:40px;
+  width:180px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#fff;
+  color:var(--text);
+  font-size:14px;
+}
+
 .search:focus,
+.toolbar-select:focus,
 .input:focus,
 .select:focus,
 .textarea:focus{
@@ -679,7 +691,8 @@ tbody tr:hover{
     justify-content:flex-start;
   }
 
-  .search{
+  .search,
+  .toolbar-select{
     width:100%;
   }
 
@@ -730,6 +743,10 @@ tbody tr:hover{
       </div>
       <div class="toolbar">
         <input class="search" id="search-input" type="text" placeholder="搜索商务负责人、单位名称、行业、需求、来源、关键人">
+        <select class="toolbar-select" id="owner-filter">
+          <option value="all">全部负责人</option>
+          <option value="me">只看我的</option>
+        </select>
         <button class="btn btn-ghost" id="refresh-btn">刷新</button>
         <button class="btn btn-ghost" id="bulk-approve-btn" style="display:none">批量审核通过</button>
         <button class="btn btn-ghost" id="bulk-reject-btn" style="display:none">批量驳回</button>
@@ -752,7 +769,7 @@ tbody tr:hover{
         <div class="stat-card">
           <div class="stat-label">我的跟踪客户</div>
           <div class="stat-value" id="stat-mine">0</div>
-          <div class="stat-hint">按 owner_id 匹配</div>
+          <div class="stat-hint">按 owner_id / 负责人名称匹配</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">审核通过</div>
@@ -979,7 +996,7 @@ tbody tr:hover{
     </div>
   </div>
 
-<script src="crm-common.js"></script>
+<script src="crm-common.js?v=owner-fix-20260511"></script>
 <script>
 var currentUser = CRMApp.requireAuth('leads');
 var leads = [];
@@ -1072,11 +1089,85 @@ function normalizeLead(item) {
 }
 
 function canEditLead(item) {
-  return CRMApp.canEditOwner(currentUser, item && item.ownerId);
+  return CRMApp.canEditOwner(currentUser, item && item.ownerId, item && item.businessOwner);
 }
 
 function canDeleteLead(item) {
-  return CRMApp.canEditOwner(currentUser, item.ownerId);
+  return CRMApp.canEditOwner(currentUser, item && item.ownerId, item && item.businessOwner);
+}
+
+function normalizeOwnerFilterKey(value) {
+  return String(value || '').replace(/\s+/g, '').toLowerCase();
+}
+
+function getLeadOwnerDisplayName(item) {
+  var ownerName = (item && (item.businessOwner || item.ownerName)) || '';
+  return ownerName === '未分配' ? '' : ownerName;
+}
+
+function getLeadOwnerFilterValue(item) {
+  if (item && item.ownerId) return 'id:' + item.ownerId;
+  var ownerName = getLeadOwnerDisplayName(item);
+  return ownerName ? 'name:' + normalizeOwnerFilterKey(ownerName) : 'unassigned';
+}
+
+function isMyLead(item) {
+  return String(item && item.ownerId) === String(currentUser.id)
+    || CRMApp.ownerNameMatchesUser(currentUser, getLeadOwnerDisplayName(item));
+}
+
+function matchesOwnerFilter(item, filterValue) {
+  var value = filterValue || 'all';
+  if (value === 'all') return true;
+  if (value === 'me') return isMyLead(item);
+  if (value === 'unassigned') return getLeadOwnerFilterValue(item) === 'unassigned';
+  if (value.indexOf('id:') === 0) return String(item && item.ownerId) === value.slice(3);
+  if (value.indexOf('name:') === 0) {
+    return normalizeOwnerFilterKey(getLeadOwnerDisplayName(item)) === value.slice(5);
+  }
+  return true;
+}
+
+function refreshOwnerFilterOptions() {
+  var select = document.getElementById('owner-filter');
+  var selectedValue = select.value || 'all';
+  var owners = new Map();
+  var hasUnassigned = false;
+
+  leads.forEach(function(item) {
+    var value = getLeadOwnerFilterValue(item);
+    if (value === 'unassigned') {
+      hasUnassigned = true;
+      return;
+    }
+    if (!owners.has(value)) {
+      owners.set(value, getLeadOwnerDisplayName(item) || item.ownerName || '未命名负责人');
+    }
+  });
+
+  var options = [
+    '<option value="all">全部负责人</option>',
+    '<option value="me">只看我的</option>'
+  ];
+
+  if (hasUnassigned) {
+    options.push('<option value="unassigned">未分配</option>');
+  }
+
+  Array.from(owners.entries())
+    .sort(function(left, right) { return left[1].localeCompare(right[1], 'zh-CN'); })
+    .forEach(function(entry) {
+      options.push(
+        '<option value="' + CRMApp.escapeHtml(entry[0]) + '">' +
+          CRMApp.escapeHtml(entry[1]) +
+        '</option>'
+      );
+    });
+
+  select.innerHTML = options.join('');
+  select.value = Array.from(select.options).some(function(option) {
+    return option.value === selectedValue;
+  }) ? selectedValue : 'all';
 }
 
 function setUserUI() {
@@ -1105,6 +1196,7 @@ async function loadLeads() {
     }
 
     leads = allRows.map(normalizeLead);
+    refreshOwnerFilterOptions();
     applyFilter();
   } catch (error) {
     alert(error.message || '加载客户跟踪数据失败。');
@@ -1113,8 +1205,10 @@ async function loadLeads() {
 
 function applyFilter() {
   var keyword = document.getElementById('search-input').value.trim().toLowerCase();
+  var ownerFilter = document.getElementById('owner-filter').value || 'all';
 
   filteredLeads = leads.filter(function(item) {
+    if (!matchesOwnerFilter(item, ownerFilter)) return false;
     if (!keyword) return true;
 
     return [
@@ -1146,7 +1240,7 @@ function applyFilter() {
 function renderStats() {
   var total = filteredLeads.length;
   var mine = filteredLeads.filter(function(item) {
-    return String(item.ownerId) === String(currentUser.id);
+    return isMyLead(item);
   }).length;
 
   var approvedCount = filteredLeads.filter(function(item) {
@@ -1680,12 +1774,18 @@ async function importLeadFile(file) {
 
 async function initPage() {
   if (!currentUser) return;
+  try {
+    currentUser = await CRMApp.apiRequest('/api/auth/me');
+  } catch (error) {
+    return;
+  }
   setUserUI();
   initReviewControls();
   await loadLeads();
 }
 
 document.getElementById('search-input').addEventListener('input', applyFilter);
+document.getElementById('owner-filter').addEventListener('change', applyFilter);
 document.getElementById('refresh-btn').addEventListener('click', loadLeads);
 document.getElementById('bulk-approve-btn').addEventListener('click', function() {
   batchReviewLeads('approved');

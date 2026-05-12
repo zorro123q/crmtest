@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>商机通报 - SalesPilot CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --primary:#0ea5e9;
@@ -36,6 +37,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
 .content{flex:1;overflow-y:auto;padding:24px}
 .notice{margin-bottom:18px;padding:14px 16px;border-radius:10px;background:#fffbeb;border:1px solid #f59e0b;color:#92400e;line-height:1.7;font-size:13px}
 .report-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.email-config-panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.email-config-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.email-config-head h2{font-size:18px;font-weight:800}
+.email-config-head p{margin-top:6px;font-size:13px;color:var(--text2);line-height:1.6}
+.email-config-grid{padding:18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.email-field{display:flex;flex-direction:column;gap:8px;font-size:13px;font-weight:700;color:var(--text)}
+.email-field-inline{grid-column:1/-1;flex-direction:row;align-items:center}
+.email-field input[type="text"],.email-field input[type="number"],.email-field select,.email-field textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;padding:10px 12px;font-size:14px;color:var(--text);font-family:inherit}
+.email-field textarea{min-height:92px;resize:vertical;line-height:1.5}
+.email-field input:focus,.email-field select:focus,.email-field textarea:focus{outline:none;border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.16)}
+.email-config-actions{padding:0 18px 18px;display:flex;gap:10px;flex-wrap:wrap}
 .panel-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px}
 .panel-head h2{font-size:18px;font-weight:800}
 .panel-head span{font-size:13px;color:var(--text2)}
@@ -50,8 +62,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
 .excel-table .metric-cell{background:#fef3c7;text-align:left;font-weight:800}
 .excel-table .target-cell{background:#fffdf3;color:#475569}
 .excel-table .actual-cell{background:#fff}
+.target-input{width:92px;max-width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;font-size:13px;text-align:center}
+.target-input:focus{outline:none;border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.16)}
+.group-label-input{width:86px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:#0f172a;font-size:13px;font-weight:700;text-align:center}
+.group-label-input-wide{width:180px}
+.group-label-input:focus{outline:none;border-color:#0ea5e9;box-shadow:0 0 0 3px rgba(14,165,233,.18)}
 .excel-table .revenue-row .metric-cell,.excel-table .revenue-row .target-cell,.excel-table .revenue-row .actual-cell{color:#b91c1c;font-weight:900}
 .empty{padding:28px;text-align:center;color:var(--text2)}
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+.chart-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.chart-head h2{font-size:18px;font-weight:800}
+.chart-body{padding:18px}
+.chart-row{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.chart-box{background:#fafcff;border:1px solid var(--border);border-radius:12px;padding:16px}
+.chart-box h3{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;text-align:center}
+.chart-container{position:relative;height:280px}
+@media (max-width:1100px){.chart-row{grid-template-columns:1fr}}
 @media (max-width:860px){
   body{display:block}
   .sidebar{width:100%;padding:14px}
@@ -59,6 +85,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
   .topbar{flex-direction:column;align-items:flex-start}
   .topbar-tools{justify-content:flex-start}
   .content{padding:16px}
+  .email-config-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -80,6 +107,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
       <a href="page-leads.html">线索管理</a>
       <a href="page-opportunities.html">商机列表</a>
       <a href="page-report.html" class="active">商机通报</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">外勤管理</div>
+      <a href="page-checkin.html">位置打卡</a>
     </div>
     <div class="nav-section">
       <div class="nav-label">AI 能力</div>
@@ -108,8 +139,113 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
 
   <div class="content">
     <div class="notice">
-      目标值暂按前端默认总目标和比例计算：老客户新业务总目标 0，新客户新老业务总目标 0；合同均额目标老客户 100，新客户 50。实际值来自后端实时商机数据。
+      目标值暂按前端默认总目标和比例计算；实际值来自后端实时商机数据。部门列为全部负责人汇总，小组列按商务负责人分组统计。
     </div>
+
+    <section class="chart-section" id="trend-chart-section">
+      <div class="chart-head">
+        <div>
+          <h2>商机趋势分析</h2>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <select class="select" id="trend-weeks-select">
+            <option value="8">最近8周</option>
+            <option value="12" selected>最近12周</option>
+            <option value="16">最近16周</option>
+            <option value="24">最近24周</option>
+          </select>
+          <button class="btn" id="refresh-trend-btn">刷新趋势</button>
+        </div>
+      </div>
+      <div class="chart-body">
+        <div class="chart-row">
+          <div class="chart-box">
+            <h3>老客户新业务 - 收集信息数</h3>
+            <div class="chart-container">
+              <canvas id="old-collected-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-box">
+            <h3>老客户新业务 - 签约数</h3>
+            <div class="chart-container">
+              <canvas id="old-signed-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-box">
+            <h3>新客户新老业务 - 收集信息数</h3>
+            <div class="chart-container">
+              <canvas id="new-collected-chart"></canvas>
+            </div>
+          </div>
+          <div class="chart-box">
+            <h3>新客户新老业务 - 签约数</h3>
+            <div class="chart-container">
+              <canvas id="new-signed-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="email-config-panel" id="email-config-panel" style="display:none">
+      <div class="email-config-head">
+        <div>
+          <h2>邮件发送配置</h2>
+          <p>配置后可按指定时间自动发送商机通报，也可以手动发送测试邮件。</p>
+        </div>
+      </div>
+
+      <div class="email-config-grid">
+        <label class="email-field email-field-inline">
+          <input id="report-email-enabled" type="checkbox" />
+          <span>启用定时发送</span>
+        </label>
+
+        <label class="email-field">
+          <span>定时发送星期</span>
+          <select id="report-email-weekday">
+            <option value="mon">周一</option>
+            <option value="tue">周二</option>
+            <option value="wed">周三</option>
+            <option value="thu">周四</option>
+            <option value="fri">周五</option>
+            <option value="sat">周六</option>
+            <option value="sun">周日</option>
+          </select>
+        </label>
+
+        <label class="email-field">
+          <span>定时发送小时</span>
+          <input id="report-email-hour" type="number" min="0" max="23" step="1" placeholder="18" />
+        </label>
+
+        <label class="email-field">
+          <span>定时发送分钟</span>
+          <input id="report-email-minute" type="number" min="0" max="59" step="1" placeholder="0" />
+        </label>
+
+        <label class="email-field">
+          <span>定时时区</span>
+          <input id="report-email-timezone" type="text" placeholder="Asia/Shanghai" />
+        </label>
+
+        <label class="email-field">
+          <span>收件邮箱</span>
+          <textarea id="report-email-recipients" placeholder="qichen8@iflytek.com,hryu3@iflytek.com"></textarea>
+        </label>
+
+        <label class="email-field">
+          <span>邮件标题前缀</span>
+          <input id="report-email-subject-prefix" type="text" placeholder="SalesPilot CRM 商机通报" />
+        </label>
+
+      </div>
+
+      <div class="email-config-actions">
+        <button class="btn btn-primary" id="save-email-config-btn" type="button">保存邮件配置</button>
+        <button class="btn" id="send-email-test-btn" type="button">立即发送测试邮件</button>
+      </div>
+    </section>
 
     <section class="report-panel">
       <div class="panel-head">
@@ -133,19 +269,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei
   </div>
 </div>
 
-<script src="crm-common.js"></script>
+<script src="crm-common.js?v=owner-fix-20260511"></script>
 <script>
 var currentUser = CRMApp.requireAuth();
 var users = [];
 var currentReport = null;
+var trendCharts = {};
 
 var OLD_TOTAL_TARGET = 0;
 var NEW_TOTAL_TARGET = 0;
 var OLD_AVG_CONTRACT_TARGET = 100;
 var NEW_AVG_CONTRACT_TARGET = 50;
+const REPORT_TARGET_CELL_STORAGE_KEY = 'crm_report_target_cells';
+const REPORT_GROUP_CONFIG_STORAGE_KEY = 'crm_report_group_config';
 
-var PIONEER_GROUP_MEMBERS = [];
-var CHARGE_GROUP_MEMBERS = [];
+var PIONEER_GROUP_MEMBERS = ['李鑫健'];
+var CHARGE_GROUP_MEMBERS = ['杨序冬', '杨序东'];
 
 var GROUPS = [
   { key: 'pioneer_leader', oldLabel: '先锋组组长：陈祺', newLabel: '先锋组组长：陈祺', oldRatio: 0.40, newRatio: 0.10 },
@@ -183,6 +322,10 @@ function setScopeText(text) {
   document.getElementById('scope-text').textContent = text;
 }
 
+function canEditReportTargets() {
+  return CRMApp.isAdmin(currentUser);
+}
+
 function formatNumber(value) {
   return Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 }
@@ -207,14 +350,280 @@ function getTargetValue(moduleKey, group, metric) {
   return Number((totalTarget * ratio).toFixed(2));
 }
 
+function getTargetCellKey(moduleKey, groupKey, metricKey) {
+  return moduleKey + ':' + groupKey + ':' + metricKey;
+}
+
+function loadTargetCellOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem(REPORT_TARGET_CELL_STORAGE_KEY) || '{}') || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveTargetCellOverrides(overrides) {
+  if (!CRMApp.isAdmin(currentUser)) {
+    CRMApp.showToast('只有管理员可以修改目标值', 'warning');
+    return false;
+  }
+  localStorage.setItem(REPORT_TARGET_CELL_STORAGE_KEY, JSON.stringify(overrides || {}));
+  return true;
+}
+
+function getTargetCellValue(moduleKey, group, metric) {
+  var overrides = loadTargetCellOverrides();
+  var key = getTargetCellKey(moduleKey, group.key, metric.key);
+
+  if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+    return Number(overrides[key] || 0);
+  }
+
+  return getTargetValue(moduleKey, group, metric);
+}
+
+function saveTargetCellValue(moduleKey, groupKey, metricKey, value) {
+  if (!CRMApp.isAdmin(currentUser)) {
+    CRMApp.showToast('只有管理员可以修改目标值', 'warning');
+    return false;
+  }
+
+  var overrides = loadTargetCellOverrides();
+  var key = getTargetCellKey(moduleKey, groupKey, metricKey);
+  overrides[key] = Number(value || 0);
+  return saveTargetCellOverrides(overrides);
+}
+
+function splitListInput(value) {
+  if (Array.isArray(value)) {
+    return value.reduce(function(result, item) {
+      return result.concat(splitListInput(item));
+    }, []);
+  }
+  return String(value || '')
+    .split(/[,，;\n\r；]+/)
+    .map(function(item) { return item.trim(); })
+    .filter(Boolean)
+    .filter(function(item, index, list) { return list.indexOf(item) === index; });
+}
+
+function joinListInput(list) {
+  return splitListInput(list).join(', ');
+}
+
+function numberInputValue(id, fallback) {
+  var value = Number(document.getElementById(id).value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getDefaultGroupConfig() {
+  return {
+    pioneerLeaderName: '陈祺',
+    chargeLeaderName: '余浩然',
+    pioneerGroupMembers: ['李鑫健'],
+    chargeGroupMembers: ['杨序冬', '杨序东'],
+    departmentLabel: '部门（鑫健70%、春梅30%）'
+  };
+}
+
+function loadGroupConfig() {
+  var defaults = getDefaultGroupConfig();
+  try {
+    var raw = localStorage.getItem(REPORT_GROUP_CONFIG_STORAGE_KEY);
+    if (!raw) return defaults;
+    var parsed = JSON.parse(raw) || {};
+    return Object.assign({}, defaults, parsed, {
+      pioneerGroupMembers: splitListInput(parsed.pioneerGroupMembers || defaults.pioneerGroupMembers),
+      chargeGroupMembers: splitListInput(parsed.chargeGroupMembers || defaults.chargeGroupMembers)
+    });
+  } catch (e) {
+    return defaults;
+  }
+}
+
+function saveGroupConfig(config) {
+  if (!CRMApp.isAdmin(currentUser)) {
+    CRMApp.showToast('只有管理员可以修改表头配置', 'warning');
+    return false;
+  }
+
+  localStorage.setItem(
+    REPORT_GROUP_CONFIG_STORAGE_KEY,
+    JSON.stringify(config || getDefaultGroupConfig())
+  );
+  return true;
+}
+
+function getGroupConfig() {
+  return loadGroupConfig();
+}
+
+function applyGroupConfigToGroups() {
+  var config = getGroupConfig();
+
+  GROUPS = [
+    {
+      key: 'pioneer_leader',
+      oldLabel: '先锋组组长：' + config.pioneerLeaderName,
+      newLabel: '先锋组组长：' + config.pioneerLeaderName,
+      oldRatio: 0.40,
+      newRatio: 0.10
+    },
+    {
+      key: 'pioneer_group',
+      oldLabel: '先锋组：小组人员（组长自行分配）',
+      newLabel: '先锋组：小组渠道对接人',
+      oldRatio: 0,
+      newRatio: 0.30
+    },
+    {
+      key: 'charge_leader',
+      oldLabel: '冲锋组组长：' + config.chargeLeaderName,
+      newLabel: '冲锋组组长：' + config.chargeLeaderName,
+      oldRatio: 0.30,
+      newRatio: 0.20
+    },
+    {
+      key: 'charge_group',
+      oldLabel: '冲锋组：小组人员（组长自行分配）',
+      newLabel: '冲锋组：小组渠道对接人',
+      oldRatio: 0,
+      newRatio: 0.30
+    },
+    {
+      key: 'department',
+      oldLabel: config.departmentLabel,
+      newLabel: config.departmentLabel,
+      oldRatio: 0.30,
+      newRatio: 0.10
+    }
+  ];
+
+  PIONEER_GROUP_MEMBERS = config.pioneerGroupMembers || [];
+  CHARGE_GROUP_MEMBERS = config.chargeGroupMembers || [];
+}
+
+function escapeAttribute(value) {
+  return CRMApp.escapeHtml(value).replace(/"/g, '&quot;');
+}
+
+function renderGroupHeader(group, labelKey) {
+  var label = group[labelKey];
+
+  if (!CRMApp.isAdmin(currentUser)) {
+    return CRMApp.escapeHtml(label);
+  }
+
+  var config = getGroupConfig();
+
+  if (group.key === 'pioneer_leader') {
+    return '先锋组组长：<input class="group-label-input" type="text" value="' +
+      escapeAttribute(config.pioneerLeaderName) +
+      '" data-group-config-key="pioneerLeaderName">';
+  }
+
+  if (group.key === 'charge_leader') {
+    return '冲锋组组长：<input class="group-label-input" type="text" value="' +
+      escapeAttribute(config.chargeLeaderName) +
+      '" data-group-config-key="chargeLeaderName">';
+  }
+
+  if (group.key === 'department') {
+    return '<input class="group-label-input group-label-input-wide" type="text" value="' +
+      escapeAttribute(config.departmentLabel) +
+      '" data-group-config-key="departmentLabel">';
+  }
+
+  return CRMApp.escapeHtml(label);
+}
+
+function syncEmailConfigForm(config) {
+  var nextConfig = config || {};
+  var recipients = splitListInput(nextConfig.recipients);
+
+  document.getElementById('report-email-enabled').checked = nextConfig.enabled !== false;
+  document.getElementById('report-email-weekday').value = nextConfig.schedule_weekday || 'fri';
+  document.getElementById('report-email-hour').value = nextConfig.schedule_hour == null ? 18 : Number(nextConfig.schedule_hour);
+  document.getElementById('report-email-minute').value = nextConfig.schedule_minute == null ? 0 : Number(nextConfig.schedule_minute);
+  document.getElementById('report-email-timezone').value = nextConfig.schedule_timezone || 'Asia/Shanghai';
+  document.getElementById('report-email-recipients').value = recipients.join('\n');
+  document.getElementById('report-email-subject-prefix').value = nextConfig.subject_prefix || 'SalesPilot CRM 商机通报';
+}
+
+async function loadEmailConfig() {
+  if (!CRMApp.isAdmin(currentUser)) return null;
+  try {
+    var config = await CRMApp.apiRequest('/api/opportunity-report/email-config');
+    syncEmailConfigForm(config);
+    return config;
+  } catch (error) {
+    CRMApp.showToast(error.message || '邮件配置加载失败', 'error');
+    return null;
+  }
+}
+
+function readEmailConfigForm() {
+  return {
+    enabled: document.getElementById('report-email-enabled').checked,
+    schedule_weekday: document.getElementById('report-email-weekday').value || 'fri',
+    schedule_hour: numberInputValue('report-email-hour', 18),
+    schedule_minute: numberInputValue('report-email-minute', 0),
+    schedule_timezone: document.getElementById('report-email-timezone').value.trim() || 'Asia/Shanghai',
+    recipients: splitListInput(document.getElementById('report-email-recipients').value),
+    subject_prefix: document.getElementById('report-email-subject-prefix').value.trim() || 'SalesPilot CRM 商机通报'
+  };
+}
+
+async function saveEmailConfig() {
+  var button = document.getElementById('save-email-config-btn');
+  button.disabled = true;
+  try {
+    var config = await CRMApp.apiRequest('/api/opportunity-report/email-config', {
+      method: 'PUT',
+      body: readEmailConfigForm()
+    });
+    syncEmailConfigForm(config);
+    CRMApp.showToast('邮件配置已保存', 'success');
+    await loadReport();
+  } catch (error) {
+    CRMApp.showToast(error.message || '邮件配置保存失败', 'error');
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function sendEmailTest() {
+  var button = document.getElementById('send-email-test-btn');
+  button.disabled = true;
+  try {
+    var result = await CRMApp.apiRequest('/api/opportunity-report/send-email-test', {
+      method: 'POST'
+    });
+    CRMApp.showToast((result && result.message) || '测试邮件发送成功', 'success');
+  } catch (error) {
+    CRMApp.showToast(error.message || '测试邮件发送失败', 'error', 5000);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function initEmailConfigPanel() {
+  if (!CRMApp.isAdmin(currentUser)) return;
+  document.getElementById('email-config-panel').style.display = 'block';
+  document.getElementById('save-email-config-btn').addEventListener('click', saveEmailConfig);
+  document.getElementById('send-email-test-btn').addEventListener('click', sendEmailTest);
+  await loadEmailConfig();
+}
+
 function renderTargetTable(options) {
   var moduleData = options.data || {};
   var moduleKey = options.moduleKey;
   var metrics = options.metrics;
   var labelKey = moduleKey === 'old' ? 'oldLabel' : 'newLabel';
+  var targetEditable = canEditReportTargets();
 
   var headerTop = '<tr><th class="metric-col" rowspan="2">指标</th>' + GROUPS.map(function(group) {
-    return '<th class="group-head" colspan="2">' + CRMApp.escapeHtml(group[labelKey]) + '</th>';
+    return '<th class="group-head" colspan="2">' + renderGroupHeader(group, labelKey) + '</th>';
   }).join('') + '</tr>';
 
   var headerBottom = '<tr>' + GROUPS.map(function() {
@@ -227,9 +636,12 @@ function renderTargetTable(options) {
       '<td class="metric-cell">' + CRMApp.escapeHtml(metric.label) + '</td>' +
       GROUPS.map(function(group) {
         var groupMetrics = moduleData[group.key] || {};
-        var target = getTargetValue(moduleKey, group, metric);
+        var target = getTargetCellValue(moduleKey, group, metric);
         var actual = groupMetrics[metric.key] || 0;
-        return '<td class="target-cell">' + formatValue(target, metric) + '</td>' +
+        var targetHtml = targetEditable
+          ? '<input class="target-input" type="number" min="0" step="0.01" value="' + Number(target || 0) + '" data-module-key="' + CRMApp.escapeHtml(moduleKey) + '" data-group-key="' + CRMApp.escapeHtml(group.key) + '" data-metric-key="' + CRMApp.escapeHtml(metric.key) + '">'
+          : formatValue(target, metric);
+        return '<td class="target-cell">' + targetHtml + '</td>' +
           '<td class="actual-cell">' + formatValue(actual, metric) + '</td>';
       }).join('') +
     '</tr>';
@@ -256,10 +668,21 @@ function renderReport(payload) {
 }
 
 function appendMemberParams(params) {
-  PIONEER_GROUP_MEMBERS.forEach(function(name) {
+  var config = getGroupConfig();
+
+  if (config.pioneerLeaderName) {
+    params.append('pioneer_leader_names', config.pioneerLeaderName);
+  }
+
+  if (config.chargeLeaderName) {
+    params.append('charge_leader_names', config.chargeLeaderName);
+  }
+
+  (config.pioneerGroupMembers || []).forEach(function(name) {
     if (name) params.append('pioneer_members', name);
   });
-  CHARGE_GROUP_MEMBERS.forEach(function(name) {
+
+  (config.chargeGroupMembers || []).forEach(function(name) {
     if (name) params.append('charge_members', name);
   });
 }
@@ -301,7 +724,7 @@ async function loadReport() {
         setScopeText('管理员范围：' + (selectedUser ? selectedUser.username : '所选用户'));
       }
     } else {
-      setScopeText('当前用户范围：' + currentUser.username);
+      setScopeText('全员可见：全部用户；仅管理员可筛选用户、修改目标和邮件配置。');
     }
   } catch (error) {
     setScopeText(error.message || '加载商机通报失败。');
@@ -310,17 +733,197 @@ async function loadReport() {
   }
 }
 
-async function initPage() {
-  if (!currentUser) return;
-  setUserUI();
-  if (CRMApp.isAdmin(currentUser)) {
-    await loadUsersIfAdmin();
-    document.getElementById('user-filter').addEventListener('change', loadReport);
+function createOrUpdateChart(canvasId, label, labels, data, color) {
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  if (trendCharts[canvasId]) {
+    trendCharts[canvasId].destroy();
   }
-  await loadReport();
+
+  trendCharts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: label,
+        data: data,
+        borderColor: color,
+        backgroundColor: color + '20',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            title: function(items) {
+              return items[0] ? items[0].label : '';
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1,
+            font: { size: 11 }
+          },
+          grid: {
+            color: '#e2e8f0'
+          }
+        },
+        x: {
+          ticks: {
+            font: { size: 10 },
+            maxRotation: 45
+          },
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  });
 }
 
-document.getElementById('refresh-btn').addEventListener('click', loadReport);
+async function loadTrend() {
+  try {
+    var weeks = document.getElementById('trend-weeks-select').value || 12;
+    var params = new URLSearchParams();
+    params.set('weeks', weeks);
+    appendMemberParams(params);
+
+    if (CRMApp.isAdmin(currentUser)) {
+      var selectedUserId = document.getElementById('user-filter').value || 'all';
+      if (selectedUserId !== 'all') {
+        params.set('user_id', selectedUserId);
+      }
+    }
+
+    var query = params.toString();
+    var payload = await CRMApp.apiRequest('/api/opportunity-report/trend' + (query ? '?' + query : ''));
+
+    var weeks = payload.weeks || [];
+    var oldData = payload.old_customer_new_business || {};
+    var newData = payload.new_customer_business || {};
+
+    var oldCollected = weeks.map(function(w) { return (oldData[w] || {}).collected_info_count || 0; });
+    var oldSigned = weeks.map(function(w) { return (oldData[w] || {}).signed_count || 0; });
+    var newCollected = weeks.map(function(w) { return (newData[w] || {}).collected_info_count || 0; });
+    var newSigned = weeks.map(function(w) { return (newData[w] || {}).signed_count || 0; });
+
+    var shortLabels = weeks.map(function(w) {
+      var parts = w.split('-W');
+      return 'W' + parts[1];
+    });
+
+    createOrUpdateChart('old-collected-chart', '收集信息数', shortLabels, oldCollected, '#0ea5e9');
+    createOrUpdateChart('old-signed-chart', '签约数', shortLabels, oldSigned, '#10b981');
+    createOrUpdateChart('new-collected-chart', '收集信息数', shortLabels, newCollected, '#f59e0b');
+    createOrUpdateChart('new-signed-chart', '签约数', shortLabels, newSigned, '#8b5cf6');
+  } catch (error) {
+    console.error('加载趋势数据失败:', error);
+  }
+}
+
+async function initPage() {
+  if (!currentUser) return;
+  try {
+    currentUser = await CRMApp.apiRequest('/api/auth/me');
+  } catch (error) {
+    return;
+  }
+  setUserUI();
+  applyGroupConfigToGroups();
+  if (CRMApp.isAdmin(currentUser)) {
+    await loadUsersIfAdmin();
+    await initEmailConfigPanel();
+    document.getElementById('user-filter').addEventListener('change', function() {
+      loadReport();
+      loadTrend();
+    });
+  }
+  await loadReport();
+  await loadTrend();
+}
+
+document.getElementById('refresh-btn').addEventListener('click', function() {
+  loadReport();
+  loadTrend();
+});
+document.getElementById('refresh-trend-btn').addEventListener('click', loadTrend);
+document.getElementById('trend-weeks-select').addEventListener('change', loadTrend);
+document.addEventListener('change', function(event) {
+  var input = event.target;
+  if (!input.classList || !input.classList.contains('target-input')) return;
+  if (!CRMApp.isAdmin(currentUser)) {
+    CRMApp.showToast('只有管理员可以修改目标值', 'warning');
+    return;
+  }
+
+  var moduleKey = input.getAttribute('data-module-key');
+  var groupKey = input.getAttribute('data-group-key');
+  var metricKey = input.getAttribute('data-metric-key');
+
+  if (saveTargetCellValue(moduleKey, groupKey, metricKey, input.value)) {
+    CRMApp.showToast('目标值已保存', 'success', 1200);
+  }
+});
+document.addEventListener('change', function(event) {
+  var input = event.target;
+  if (!input.classList || !input.classList.contains('group-label-input')) return;
+
+  if (!CRMApp.isAdmin(currentUser)) {
+    CRMApp.showToast('只有管理员可以修改表头', 'warning');
+    return;
+  }
+
+  var key = input.getAttribute('data-group-config-key');
+  var config = getGroupConfig();
+  var value = String(input.value || '').trim();
+
+  if (!value) {
+    CRMApp.showToast('名称不能为空', 'warning');
+    input.value = config[key] || '';
+    return;
+  }
+
+  config[key] = value;
+  if (!saveGroupConfig(config)) return;
+  applyGroupConfigToGroups();
+
+  CRMApp.showToast('表头名称已保存', 'success', 1200);
+  loadReport();
+});
+document.addEventListener('keydown', function(event) {
+  var input = event.target;
+  if (!input.classList || !input.classList.contains('target-input')) return;
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    input.blur();
+  }
+});
+document.addEventListener('keydown', function(event) {
+  var input = event.target;
+  if (!input.classList || !input.classList.contains('group-label-input')) return;
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    input.blur();
+  }
+});
 initPage();
 </script>
 </body>
