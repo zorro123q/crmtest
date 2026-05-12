@@ -11,12 +11,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
-from app.api.routes import admin, ai, auth, card_evaluations, leads, opportunities, opportunity_report, reviews, scoring
+from app.api.routes import admin, ai, auth, card_evaluations, checkins, leads, opportunities, opportunity_report, reviews, scoring
 from app.api.routes.analytics import router as analytics_router
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal, engine
 from app.models import User
+from app.services.report_scheduler_service import shutdown_report_scheduler, start_report_scheduler
 from app.services.schema_service import ensure_runtime_schema
 
 
@@ -37,9 +38,13 @@ async def lifespan(app: FastAPI):
         # If the schema has not been created yet, do not block app startup.
         pass
 
-    yield
+    start_report_scheduler()
 
-    await engine.dispose()
+    try:
+        yield
+    finally:
+        shutdown_report_scheduler()
+        await engine.dispose()
 
 
 app = FastAPI(
@@ -70,6 +75,7 @@ app.include_router(card_evaluations.router)
 app.include_router(admin.router)
 app.include_router(reviews.router)
 app.include_router(analytics_router)
+app.include_router(checkins.router)
 
 
 def _database_error_detail(exc: OperationalError) -> str:
